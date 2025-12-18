@@ -31,7 +31,14 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+**Verify compliance with all constitution principles:**
+
+- **Code Quality**: Ensure implementation plan follows single-purpose functions, proper typing, and documentation standards
+- **Testing Standards**: Define test strategy (unit, integration, E2E) and coverage targets for this feature
+- **User Experience Consistency**: Validate UI/UX approach aligns with design system and accessibility requirements
+- **Performance Requirements**: Identify performance targets and optimization strategies for this feature
+
+[Document any specific gates or compliance checks for this feature]
 
 ## Project Structure
 

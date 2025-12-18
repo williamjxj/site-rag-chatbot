@@ -105,11 +105,17 @@
 <!--
   ACTION REQUIRED: Define measurable success criteria.
   These must be technology-agnostic and measurable.
+  
+  NOTE: Align with constitution principles:
+  - Performance Requirements: Include page load, API response times, bundle size targets
+  - User Experience Consistency: Include accessibility, task completion rates, error rates
+  - Testing Standards: Include test coverage targets if applicable
 -->
 
 ### Measurable Outcomes
 
-- **SC-001**: [Measurable metric, e.g., "Users can complete account creation in under 2 minutes"]
-- **SC-002**: [Measurable metric, e.g., "System handles 1000 concurrent users without degradation"]
+- **SC-001**: [User experience metric, e.g., "Users can complete account creation in under 2 minutes"]
+- **SC-002**: [Performance metric, e.g., "Page load time <2s, API response <500ms p95"]
 - **SC-003**: [User satisfaction metric, e.g., "90% of users successfully complete primary task on first attempt"]
 - **SC-004**: [Business metric, e.g., "Reduce support tickets related to [X] by 50%"]
+- **SC-005**: [Accessibility metric, e.g., "WCAG 2.1 AA compliance verified for all new UI components"]
