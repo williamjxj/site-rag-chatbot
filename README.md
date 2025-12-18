@@ -14,6 +14,7 @@ The system is fully functional and ready for use. See [docs/implementation-summa
 
 - **Chat Interface**: Ask questions and get answers based on ingested content
 - **Content Ingestion**: Ingest content from static websites (via sitemap) and documents (.md, .pdf, .txt)
+- **Heading-Aware Chunking**: Markdown files are chunked by semantic sections, preserving document structure
 - **Vector Search**: Semantic search using PostgreSQL + pgvector
 - **Source Citations**: All answers include source citations
 - **Admin Interface**: Manage knowledge base content (view, filter, delete documents)
@@ -195,8 +196,10 @@ See `specs/001-rag-chatbot/contracts/api.yaml` for full API documentation.
 Edit `backend/.env`:
 - `SITEMAP_URL`: URL to your website's sitemap.xml
 - `DOCS_DIR`: Path to directory containing .md, .pdf, .txt files
-- `OPENAI_API_KEY`: Your OpenAI API key for embeddings
-- `DEEPSEEK_API_KEY`: Your Deepseek API key for chat
+- `LLM_PROVIDER`: Provider name (e.g., "deepseek" or "openai")
+- `OPENAI_BASE_URL`: Base URL for OpenAI-compatible API (e.g., "https://api.deepseek.com")
+- `OPENAI_API_KEY`: Your API key for embeddings and chat
+- `VECTOR_STORE`: Vector store type ("memory" for dev, "pgvector" for production)
 
 ## Backend Dependencies
 
@@ -266,6 +269,7 @@ npm run lint
 ✅ **User Story 2 - Content Ingestion**
 - Website crawling via sitemap
 - File loaders (PDF, Markdown, TXT)
+- Heading-aware chunking for markdown files
 - Chunking and embedding pipeline
 - Incremental updates with change detection
 
@@ -296,9 +300,10 @@ docker compose restart  # Restart if needed
 
 ### API Key Errors
 
-Ensure your `.env` file has valid API keys:
-- `OPENAI_API_KEY` - Required for embeddings
-- `DEEPSEEK_API_KEY` - Required for chat
+Ensure your `backend/.env` file has valid API keys:
+- `OPENAI_API_KEY` - Required for embeddings and chat (if using OpenAI-compatible provider)
+- `OPENAI_BASE_URL` - Set to provider's base URL (e.g., "https://api.deepseek.com" for DeepSeek)
+- `LLM_PROVIDER` - Set to "deepseek" or "openai" (defaults to "openai")
 
 ### No Answers Returned
 

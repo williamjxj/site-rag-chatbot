@@ -5,7 +5,7 @@ from pathlib import Path
 
 from ..db import SessionLocal, Chunk
 from ..config import settings
-from .chunking import chunk_text, hash_text
+from .chunking import chunk_text, chunk_markdown_by_headings, hash_text
 from .normalize import normalize_text
 from .dedupe import deduplicate_chunks
 from .sources.sitemap_crawler import fetch_sitemap_urls, fetch_page
@@ -95,7 +95,7 @@ def ingest_website() -> None:
 
 
 def ingest_docs() -> None:
-    """Ingest content from local documents."""
+    """Ingest content from local documents with heading-aware chunking for markdown."""
     docs_path = Path(settings.docs_dir)
     if not docs_path.exists():
         print(f"Docs directory not found: {docs_path}")
@@ -107,23 +107,49 @@ def ingest_docs() -> None:
             loaded = load_file(p)
             if not loaded or not loaded["text"].strip():
                 continue
-            uri = loaded["path"]
+            uri = loaded.get("uri") or loaded.get("path")
             normalized_text = normalize_text(loaded["text"])
             if not normalized_text:
                 continue
-            for chunk_text_content in chunk_text(normalized_text):
-                h = hash_text(uri + "\n" + chunk_text_content)
-                items.append(
-                    {
-                        "id": str(uuid.uuid5(uuid.NAMESPACE_URL, h)),
-                        "source": "file",
-                        "uri": uri,
-                        "title": loaded.get("title"),
-                        "heading_path": None,
-                        "text": chunk_text_content,
-                        "text_hash": h,
-                    }
-                )
+
+            # Check if this is a markdown file with headings
+            # Re-extract headings from normalized text to ensure positions match
+            from .sources.md_loader import extract_headings
+
+            is_markdown = p.suffix.lower() in [".md", ".mdx"]
+            headings = extract_headings(normalized_text) if is_markdown else None
+
+            if is_markdown and headings:
+                # Use heading-aware chunking for markdown
+                chunked = chunk_markdown_by_headings(normalized_text, headings)
+                for chunk_text_content, heading_path in chunked:
+                    h = hash_text(uri + "\n" + str(heading_path) + "\n" + chunk_text_content)
+                    items.append(
+                        {
+                            "id": str(uuid.uuid5(uuid.NAMESPACE_URL, h)),
+                            "source": "file",
+                            "uri": uri,
+                            "title": loaded.get("title"),
+                            "heading_path": heading_path if heading_path else None,
+                            "text": chunk_text_content,
+                            "text_hash": h,
+                        }
+                    )
+            else:
+                # Use regular chunking for other file types
+                for chunk_text_content in chunk_text(normalized_text):
+                    h = hash_text(uri + "\n" + chunk_text_content)
+                    items.append(
+                        {
+                            "id": str(uuid.uuid5(uuid.NAMESPACE_URL, h)),
+                            "source": "file",
+                            "uri": uri,
+                            "title": loaded.get("title"),
+                            "heading_path": None,
+                            "text": chunk_text_content,
+                            "text_hash": h,
+                        }
+                    )
         except Exception as e:
             print(f"Error processing {p}: {e}")
             continue

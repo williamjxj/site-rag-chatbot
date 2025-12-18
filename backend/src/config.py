@@ -1,7 +1,12 @@
 """Configuration and settings management."""
 
 import os
+from pathlib import Path
 from pydantic_settings import BaseSettings
+
+# Get backend directory (parent of src/)
+BACKEND_DIR = Path(__file__).parent.parent
+ENV_FILE = BACKEND_DIR / ".env"
 
 
 class Settings(BaseSettings):
@@ -14,13 +19,17 @@ class Settings(BaseSettings):
     sitemap_url: str = os.getenv("SITEMAP_URL", "")
     docs_dir: str = os.getenv("DOCS_DIR", "./docs")
 
-    # Embeddings (OpenAI)
+    # OpenAI-compatible provider (DeepSeek or OpenAI)
+    llm_provider: str = os.getenv("LLM_PROVIDER", "openai")
+    openai_base_url: str = os.getenv("OPENAI_BASE_URL", "")
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
     embedding_model: str = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
 
-    # Chat LLM (Deepseek)
-    deepseek_api_key: str = os.getenv("DEEPSEEK_API_KEY", "")
+    # Chat LLM
     chat_model: str = os.getenv("CHAT_MODEL", "deepseek-chat")
+
+    # Vector store
+    vector_store: str = os.getenv("VECTOR_STORE", "memory")
 
     # Retrieval
     top_k: int = int(os.getenv("TOP_K", "6"))
@@ -32,7 +41,7 @@ class Settings(BaseSettings):
     class Config:
         """Pydantic config."""
 
-        env_file = ".env"
+        env_file = str(ENV_FILE) if ENV_FILE.exists() else None
         case_sensitive = False
 
 

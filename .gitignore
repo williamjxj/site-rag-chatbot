@@ -110,5 +110,5 @@ Thumbs.db
 .cursor/
 .specify/
 specs/
-docs/chatgpt.md
+docs/chatgpt*.md
 docs/variable.md

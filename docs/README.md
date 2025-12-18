@@ -45,3 +45,23 @@ This directory contains documentation for the Site RAG Chatbot implementation.
 ⏳ **Polish**: Pending optimizations
 
 The system is **fully functional** and ready for use. See [Implementation Summary](./implementation-summary.md) for details.
+
+## Topics/Tags
+
+RAG-powered chatbot for static websites. Ingests content from sitemaps and documents (.md, .pdf) to answer questions with source citations. Built with FastAPI, Next.js, PostgreSQL + pgvector, OpenAI embeddings, and Deepseek.
+
+```text
+rag
+chatbot
+fastapi
+nextjs
+postgresql
+pgvector
+openai
+deepseek
+vector-search
+semantic-search
+retrieval-augmented-generation
+python
+typescript
+```

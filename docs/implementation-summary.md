@@ -3,7 +3,8 @@
 **Feature**: Site RAG Chatbot  
 **Branch**: `001-rag-chatbot`  
 **Date**: 2025-01-27  
-**Status**: Core Implementation Complete
+**Status**: Core Implementation Complete  
+**Last Updated**: 2025-01-27 - Added heading-aware chunking for markdown files
 
 ## Overview
 
@@ -135,11 +136,11 @@ A complete RAG (Retrieval Augmented Generation) chatbot application that ingests
 1. **Source Loaders**:
    - `backend/src/ingest/sources/sitemap_crawler.py` - Website crawling via sitemap.xml
    - `backend/src/ingest/sources/pdf_loader.py` - PDF text extraction
-   - `backend/src/ingest/sources/md_loader.py` - Markdown/text file loading
+   - `backend/src/ingest/sources/md_loader.py` - Markdown/text file loading with heading extraction
    - `backend/src/ingest/sources/file_loader.py` - File type dispatcher
 
 2. **Processing Pipeline**:
-   - `backend/src/ingest/chunking.py` - Text chunking (1800 chars, 200 overlap)
+   - `backend/src/ingest/chunking.py` - Text chunking (1800 chars, 200 overlap) + heading-aware chunking for markdown
    - `backend/src/ingest/normalize.py` - Text normalization
    - `backend/src/ingest/dedupe.py` - Deduplication logic
    - `backend/src/ingest/pipeline.py` - Main orchestration with embeddings
@@ -155,6 +156,7 @@ A complete RAG (Retrieval Augmented Generation) chatbot application that ingests
 **Features**:
 - Sitemap-based website crawling
 - Support for .md, .mdx, .txt, .pdf files
+- **Heading-aware chunking** for markdown files (preserves document structure)
 - Incremental updates (hash-based change detection)
 - Batch embedding generation
 - Error handling for failed documents
@@ -193,7 +195,7 @@ class Chunk:
     source: str                # "web" | "file"
     uri: str                   # URL or file path
     title: str | None          # Document/page title
-    heading_path: JSON | None  # For future heading-aware chunking
+    heading_path: JSON | None  # Heading breadcrumb path for markdown chunks (list of strings)
     text: str                  # Chunk text content
     text_hash: str             # SHA-256 hash for change detection
     embedding: Vector(1536)    # Vector embedding
@@ -235,9 +237,9 @@ class Chunk:
 
 ### Chunking Strategy
 
-- **Fixed-size chunks**: 1800 characters with 200 character overlap
-- **Rationale**: Simple, effective, prevents context loss at boundaries
-- **Future**: Heading-aware chunking for structured documents
+- **Fixed-size chunks**: 1800 characters with 200 character overlap (default for non-markdown)
+- **Heading-aware chunking**: Markdown files are chunked by semantic sections defined by headings, preserving heading paths (breadcrumbs) for better context
+- **Rationale**: Simple, effective, prevents context loss at boundaries. Heading-aware chunking improves retrieval quality for structured documents.
 
 ### Embedding Model
 
@@ -369,8 +371,7 @@ site-rag-chatbot/
 
 1. **Hybrid Search**: BM25 + vector search for better exact matches
 2. **Reranking**: Cross-encoder or LLM reranker for improved relevance
-3. **Heading-Aware Chunking**: Preserve document structure
-4. **Multi-tenant Support**: Multiple knowledge bases
+3. **Multi-tenant Support**: Multiple knowledge bases
 5. **User Sessions**: Persistent conversation history
 6. **Advanced PDF Parsing**: Layout-aware extraction
 7. **Local Models**: Support for Ollama or other local LLMs
@@ -393,10 +394,13 @@ site-rag-chatbot/
 DATABASE_URL=postgresql+psycopg://rag:rag@localhost:5432/rag
 SITEMAP_URL=https://example.com/sitemap.xml
 DOCS_DIR=./docs
+# OpenAI-compatible provider (DeepSeek or OpenAI)
+LLM_PROVIDER=deepseek
+OPENAI_BASE_URL=https://api.deepseek.com
 OPENAI_API_KEY=your_key
-DEEPSEEK_API_KEY=your_key
 EMBEDDING_MODEL=text-embedding-3-small
 CHAT_MODEL=deepseek-chat
+VECTOR_STORE=memory
 TOP_K=6
 MAX_CONTEXT_CHARS=12000
 ```
