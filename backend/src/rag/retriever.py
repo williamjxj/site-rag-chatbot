@@ -1,7 +1,6 @@
 """Semantic search retrieval using vector similarity."""
 
 from sqlalchemy import select
-from pgvector.sqlalchemy import cosine_distance
 
 from ..db import SessionLocal, Chunk
 from ..config import settings
@@ -25,7 +24,7 @@ def retrieve(query_embedding: list[float], top_k: int | None = None) -> list[Chu
         stmt = (
             select(Chunk)
             .where(Chunk.embedding.is_not(None))
-            .order_by(cosine_distance(Chunk.embedding, query_embedding))
+            .order_by(Chunk.embedding.cosine_distance(query_embedding))
             .limit(top_k)
         )
         rows = db.execute(stmt).scalars().all()
