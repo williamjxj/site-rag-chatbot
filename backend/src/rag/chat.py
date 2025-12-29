@@ -68,7 +68,8 @@ def answer(question: str) -> dict[str, str | list[str]]:
     total_chars = 0
 
     for chunk in chunks:
-        block = f"Source: {chunk.uri}\nTitle: {chunk.title or ''}\nContent:\n{chunk.text}\n"
+        # Format: Source URI, Title (if available), and Content
+        block = f"Source: {chunk.uri}\nTitle: {chunk.title or 'N/A'}\nContent:\n{chunk.text}\n"
         if total_chars + len(block) > settings.max_context_chars:
             break
         context_blocks.append(block)

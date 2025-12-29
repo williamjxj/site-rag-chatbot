@@ -30,7 +30,7 @@ class Chunk(Base):
     heading_path = Column(JSON, nullable=True)
     text = Column(Text, nullable=False)
     text_hash = Column(String(64), nullable=False)
-    embedding = Column(Vector(1536), nullable=True)  # 1536 for text-embedding-3-small
+    embedding = Column(Vector, nullable=True)  # Variable dimensions: 1536 (OpenAI) or 384 (free model)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -91,3 +91,30 @@ def init_db() -> None:
         except Exception:
             # Index creation might fail if no embeddings exist yet
             pass
+        
+        # Migrate existing Vector(1536) column to flexible Vector type if needed
+        try:
+            # Check if column exists and has size constraint
+            result = conn.execute(
+                text(
+                    """
+                    SELECT data_type, udt_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'chunks' AND column_name = 'embedding';
+                    """
+                )
+            ).fetchone()
+            
+            if result and result[1] == 'vector':
+                # Column exists, try to alter if it has size constraint
+                # Note: PostgreSQL pgvector doesn't enforce size in type, but SQLAlchemy might
+                # This is a no-op if already flexible, safe to run
+                try:
+                    conn.execute(text("ALTER TABLE chunks ALTER COLUMN embedding TYPE vector;"))
+                    logger.info("Updated embedding column to support variable dimensions")
+                except Exception as e:
+                    # Column might already be flexible or migration not needed
+                    logger.debug(f"Vector column migration check: {e}")
+        except Exception as e:
+            # Table might not exist yet, or migration not applicable
+            logger.debug(f"Vector dimension migration check: {e}")

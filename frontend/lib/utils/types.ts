@@ -42,6 +42,13 @@ export interface DeleteResponse {
   chunks_deleted: number;
 }
 
+export interface UploadResponse {
+  ok: boolean;
+  message: string;
+  filename: string;
+  chunks_ingested: number;
+}
+
 export interface ErrorResponse {
   error: string;
   message: string;

@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     # Embedding API key (use OpenAI key for embeddings, separate from chat)
     embedding_api_key: str = os.getenv("EMBEDDING_API_KEY", "")  # Falls back to openai_api_key if not set
     embedding_model: str = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
+    # Free embedding model configuration
+    embedding_provider: str = os.getenv("EMBEDDING_PROVIDER", "")  # "openai" | "local" | "" (auto-detect)
+    free_embedding_model: str = os.getenv("FREE_EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 
     # Chat LLM
     chat_model: str = os.getenv("CHAT_MODEL", "deepseek-chat")
@@ -37,6 +40,15 @@ class Settings(BaseSettings):
     # Retrieval
     top_k: int = int(os.getenv("TOP_K", "6"))
     max_context_chars: int = int(os.getenv("MAX_CONTEXT_CHARS", "12000"))
+
+    # System prompt for chat LLM (can be customized via SYSTEM_PROMPT environment variable)
+    system_prompt: str = os.getenv(
+        "SYSTEM_PROMPT",
+        "You are a helpful website assistant.\n"
+        "Answer questions ONLY using the provided context from the website and documents.\n"
+        "If the answer is not in the context, say you don't know and suggest where the user might look.\n"
+        "Always include a short Sources list at the end with URLs or file paths."
+    )
 
     # Logging
     log_level: str = os.getenv("LOG_LEVEL", "INFO")

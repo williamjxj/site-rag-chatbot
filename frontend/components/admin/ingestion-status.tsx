@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { triggerIngestion } from "@/lib/api/ingest";
 import { Button } from "@/components/ui/button";
 
-export function IngestionStatus() {
+interface IngestionStatusProps {
+  onIngestComplete?: () => void;
+}
+
+export function IngestionStatus({ onIngestComplete }: IngestionStatusProps) {
   const [isIngesting, setIsIngesting] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -17,6 +21,7 @@ export function IngestionStatus() {
     try {
       const response = await triggerIngestion({ source });
       setStatus(response.message);
+      onIngestComplete?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ingestion failed");
     } finally {

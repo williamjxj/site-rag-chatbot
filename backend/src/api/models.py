@@ -61,6 +61,15 @@ class DeleteResponse(BaseModel):
     chunks_deleted: int = Field(..., ge=0, description="Number of chunks deleted")
 
 
+class UploadResponse(BaseModel):
+    """Response model for upload endpoint."""
+
+    ok: bool = Field(..., description="Whether upload and ingestion was successful")
+    message: str = Field(..., description="Status message")
+    filename: str = Field(..., description="Name of uploaded file")
+    chunks_ingested: int = Field(..., ge=0, description="Number of chunks ingested from the file")
+
+
 class ErrorResponse(BaseModel):
     """Error response model."""
 

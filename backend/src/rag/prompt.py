@@ -1,9 +1,9 @@
 """LLM prompt construction for RAG."""
 
-SYSTEM_PROMPT = """You are a helpful website assistant.
-Answer questions ONLY using the provided context from the website and documents.
-If the answer is not in the context, say you don't know and suggest where the user might look.
-Always include a short Sources list at the end with URLs or file paths."""
+from ..config import settings
+
+# Use system prompt from settings (configurable via SYSTEM_PROMPT environment variable)
+SYSTEM_PROMPT = settings.system_prompt
 
 
 def build_prompt(question: str, context_blocks: list[str]) -> str:

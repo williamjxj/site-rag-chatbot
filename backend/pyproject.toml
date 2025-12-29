@@ -17,6 +17,12 @@ dependencies = [
     "pgvector>=0.2.5",
     "tiktoken>=0.7.0",
     "openai>=1.30.0",
+    "sentence-transformers>=5.2.0",
+    "python-docx>=1.1.0",
+    "openpyxl>=3.1.0",
+    "pandas>=2.0.0",
+    "python-pptx>=0.6.0",
+    "xlrd>=2.0.0",
 ]
 
 [project.optional-dependencies]
@@ -56,3 +62,4 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+pythonpath = ["."]

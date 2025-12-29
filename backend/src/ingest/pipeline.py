@@ -94,6 +94,75 @@ def ingest_website() -> None:
         print(f"Ingested {len(items)} chunks from website")
 
 
+def ingest_single_file(file_path: Path) -> int:
+    """
+    Ingest a single file and return the number of chunks created.
+    
+    Args:
+        file_path: Path to the file to ingest
+    
+    Returns:
+        Number of chunks ingested
+    """
+    items = []
+    try:
+        loaded = load_file(file_path)
+        if not loaded or not loaded["text"].strip():
+            return 0
+        
+        uri = loaded.get("uri") or loaded.get("path") or str(file_path)
+        normalized_text = normalize_text(loaded["text"])
+        if not normalized_text:
+            return 0
+
+        # Check if this is a markdown file with headings
+        from .sources.md_loader import extract_headings
+
+        is_markdown = file_path.suffix.lower() in [".md", ".mdx"]
+        headings = extract_headings(normalized_text) if is_markdown else None
+
+        if is_markdown and headings:
+            # Use heading-aware chunking for markdown
+            chunked = chunk_markdown_by_headings(normalized_text, headings)
+            for chunk_text_content, heading_path in chunked:
+                h = hash_text(uri + "\n" + str(heading_path) + "\n" + chunk_text_content)
+                items.append(
+                    {
+                        "id": str(uuid.uuid5(uuid.NAMESPACE_URL, h)),
+                        "source": "file",
+                        "uri": uri,
+                        "title": loaded.get("title"),
+                        "heading_path": heading_path if heading_path else None,
+                        "text": chunk_text_content,
+                        "text_hash": h,
+                    }
+                )
+        else:
+            # Use regular chunking for other file types
+            for chunk_text_content in chunk_text(normalized_text):
+                h = hash_text(uri + "\n" + chunk_text_content)
+                items.append(
+                    {
+                        "id": str(uuid.uuid5(uuid.NAMESPACE_URL, h)),
+                        "source": "file",
+                        "uri": uri,
+                        "title": loaded.get("title"),
+                        "heading_path": None,
+                        "text": chunk_text_content,
+                        "text_hash": h,
+                    }
+                )
+    except Exception as e:
+        raise ValueError(f"Error processing {file_path}: {e}") from e
+
+    if items:
+        # Deduplicate before upserting
+        items = deduplicate_chunks(items)
+        upsert_chunks(items)
+        return len(items)
+    return 0
+
+
 def ingest_docs() -> None:
     """Ingest content from local documents with heading-aware chunking for markdown."""
     docs_path = Path(settings.docs_dir)

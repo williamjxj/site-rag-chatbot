@@ -1,11 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useImperativeHandle, forwardRef } from "react";
 import { listDocuments, deleteDocument } from "@/lib/api/admin";
 import type { Document } from "@/lib/utils/types";
 import { Button } from "@/components/ui/button";
 
-export function DocumentList() {
+export interface DocumentListRef {
+  refresh: () => void;
+}
+
+export const DocumentList = forwardRef<DocumentListRef>((props, ref) => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +34,10 @@ export function DocumentList() {
   useEffect(() => {
     loadDocuments();
   }, [filter]);
+
+  useImperativeHandle(ref, () => ({
+    refresh: loadDocuments,
+  }));
 
   const handleDelete = async (uri: string) => {
     if (!confirm(`Are you sure you want to delete this document?\n\n${uri}`)) {
@@ -125,4 +133,6 @@ export function DocumentList() {
       )}
     </div>
   );
-}
+});
+
+DocumentList.displayName = "DocumentList";
