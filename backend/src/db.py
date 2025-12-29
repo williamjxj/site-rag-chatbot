@@ -1,12 +1,16 @@
 """Database models and connection."""
 
+import logging
 from datetime import datetime
 from sqlalchemy import Column, String, Text, DateTime, JSON, create_engine, text
 from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.sql import func
 from pgvector.sqlalchemy import Vector
 
 from .config import settings
+
+logger = logging.getLogger(__name__)
 
 # Create engine and session
 engine = create_engine(settings.database_url, future=True)
@@ -36,7 +40,26 @@ class Chunk(Base):
 
 
 def init_db() -> None:
-    """Initialize database schema and pgvector extension."""
+    """
+    Initialize database schema and pgvector extension.
+    
+    Raises:
+        ValueError: If database connection fails
+    """
+    # Validate database connection
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        logger.info("Database connection validated successfully")
+    except SQLAlchemyError as e:
+        error_msg = (
+            f"Failed to connect to database at {settings.database_url}. "
+            f"Please check your DATABASE_URL environment variable and ensure the database is running. "
+            f"Error: {str(e)}"
+        )
+        logger.error(error_msg)
+        raise ValueError(error_msg) from e
+    
     # Create pgvector extension FIRST (before creating tables with VECTOR type)
     with engine.begin() as conn:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))

@@ -7,7 +7,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from .config import settings
+from .config import settings, validate_api_keys
 from .db import init_db
 from .api.routes import chat, ingest, admin
 
@@ -23,6 +23,15 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown."""
     # Startup
+    logger.info("Validating configuration...")
+    try:
+        validate_api_keys()
+        logger.info("API keys validated")
+    except ValueError as e:
+        logger.error(f"Configuration validation failed: {e}")
+        # Don't raise here - let the app start but log the error
+        # API key validation will happen on first request
+    
     logger.info("Initializing database...")
     init_db()
     logger.info("Database initialized")
