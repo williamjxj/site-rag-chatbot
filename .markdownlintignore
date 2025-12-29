@@ -1,0 +1,32 @@
+# Markdown lint ignore file
+# Patterns follow .gitignore syntax
+
+# Dependencies
+node_modules/
+frontend/node_modules/
+backend/.venv/
+backend/venv/
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+
+# Generated files
+*.generated.md
+
+# Cursor/IDE files
+.cursor/
+
+# Lock files (if they contain markdown)
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Documentation that may have different formatting standards
+docs/chatgpt*.md
+docs/variable.md
+
+# Spec files (may have specific formatting)
+specs/

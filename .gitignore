@@ -1,95 +1,7 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-.venv/
-venv/
-ENV/
-env/
+# Root-level .gitignore
+# General files for this monorepo application
 
-# Node.js / TypeScript
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-.pnpm-debug.log*
-dist/
-dist-ssr/
-*.local
-.next/
-out/
-.nuxt/
-.cache/
-.parcel-cache/
-
-# Environment variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.env*.local
-
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-Thumbs.db
-
-# Testing
-.coverage
-.coverage.*
-htmlcov/
-.pytest_cache/
-.tox/
-.hypothesis/
-*.cover
-*.log
-.cache
-test-results/
-playwright-report/
-playwright/.cache/
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
-# Docker
-.dockerignore
-
-# Logs
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-# OS
+# OS-specific files
 .DS_Store
 .DS_Store?
 ._*
@@ -97,16 +9,42 @@ lerna-debug.log*
 .Trashes
 ehthumbs.db
 Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDEs and editors
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment variables (general)
+.env
+.env.local
+.env*.local
+
+# Logs (general)
+logs/
+*.log
 
 # Temporary files
 *.tmp
 *.temp
 *.bak
-*.swp
-*~
 
-# William added
+# Database files (if any at root)
+*.db
+*.sqlite
+*.sqlite3
 
+# Docker
+.dockerignore
+
+# Project-specific
 .cursor/
 .specify/
 specs/

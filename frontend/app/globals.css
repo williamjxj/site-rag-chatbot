@@ -1,6 +1,9 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  /* Theme configuration for Tailwind v4 */
+  /* Colors are defined via CSS variables in :root below */
+}
 
 @layer base {
   :root {
