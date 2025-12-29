@@ -27,6 +27,7 @@ class Settings(BaseSettings):
 
     # Chat LLM
     chat_model: str = os.getenv("CHAT_MODEL", "deepseek-chat")
+    deepseek_api_key: str = os.getenv("DEEPSEEK_API_KEY", "")
 
     # Vector store
     vector_store: str = os.getenv("VECTOR_STORE", "memory")

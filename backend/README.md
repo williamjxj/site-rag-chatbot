@@ -45,11 +45,8 @@ pip install -r requirements-dev.txt
 # Create virtual environment
 python -m venv .venv
 
-# Activate (macOS/Linux)
+# Activate
 source .venv/bin/activate
-
-# Activate (Windows)
-.venv\Scripts\activate
 
 # Install dependencies
 pip install -e .

@@ -60,7 +60,7 @@ The system is fully functional and ready for use. See [docs/implementation-summa
    # Backend
    cd backend
    python -m venv .venv
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   source .venv/bin/activate
    
    # Option 1: Install from pyproject.toml (recommended)
    pip install -e .
@@ -73,7 +73,7 @@ The system is fully functional and ready for use. See [docs/implementation-summa
    
    # Frontend
    cd ../frontend
-   npm install
+   pnpm install
    ```
 
 4. **Initialize database**:
@@ -90,7 +90,7 @@ The system is fully functional and ready for use. See [docs/implementation-summa
    
    # Frontend (in another terminal)
    cd frontend
-   npm run dev
+   pnpm run dev
    ```
 
 6. **Ingest content** (optional, for testing):
@@ -214,7 +214,7 @@ The backend uses **pyproject.toml** (modern Python standard) for dependency mana
 ```bash
 cd backend
 python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+source .venv/bin/activate
 pip install -e .  # Or: pip install -r requirements.txt
 ```
 
@@ -231,8 +231,8 @@ pytest
 
 # Frontend
 cd frontend
-npm test
-npm run test:e2e
+pnpm test
+pnpm run test:e2e
 ```
 
 ### Code Quality
@@ -246,7 +246,7 @@ mypy src/
 
 # Frontend
 cd frontend
-npm run lint
+pnpm run lint
 ```
 
 ## Documentation

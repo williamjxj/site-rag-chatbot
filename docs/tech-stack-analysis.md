@@ -58,7 +58,7 @@
 | **Testing (Frontend)** | @testing-library/jest-dom | 6.1.0 | DOM matchers for Jest |
 | **E2E Testing (Frontend)** | Playwright | 1.40.0 | End-to-end testing |
 | **Linting (Frontend)** | ESLint | 8.54.0 | JavaScript/TypeScript linter |
-| **Package Manager (Frontend)** | npm/pnpm | - | Dependency management |
+| **Package Manager (Frontend)** | pnpm | - | Dependency management |
 
 ### Infrastructure & Services
 

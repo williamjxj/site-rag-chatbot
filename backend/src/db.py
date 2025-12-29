@@ -37,11 +37,15 @@ class Chunk(Base):
 
 def init_db() -> None:
     """Initialize database schema and pgvector extension."""
-    Base.metadata.create_all(bind=engine)
-    # Ensure pgvector extension exists
+    # Create pgvector extension FIRST (before creating tables with VECTOR type)
     with engine.begin() as conn:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
-        # Create indexes for performance
+    
+    # Now create tables (which use the VECTOR type)
+    Base.metadata.create_all(bind=engine)
+    
+    # Create indexes for performance
+    with engine.begin() as conn:
         conn.execute(
             text(
                 """

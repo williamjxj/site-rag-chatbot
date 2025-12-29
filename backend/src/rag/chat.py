@@ -46,11 +46,16 @@ def answer(question: str) -> dict[str, str | list[str]]:
     # Build prompt
     user_prompt = build_prompt(question, context_blocks)
 
+    # Use DeepSeek API key, fallback to OpenAI API key if not set
+    api_key = settings.deepseek_api_key or settings.openai_api_key
+    if not api_key:
+        raise ValueError("Either DEEPSEEK_API_KEY or OPENAI_API_KEY must be set")
+
     # Call Deepseek API
     response = requests.post(
         "https://api.deepseek.com/v1/chat/completions",
         headers={
-            "Authorization": f"Bearer {settings.deepseek_api_key}",
+            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         },
         json={

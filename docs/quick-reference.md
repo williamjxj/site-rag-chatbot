@@ -10,7 +10,7 @@ cd backend && docker compose up -d
 
 # Create virtual environment (use .venv)
 python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+source .venv/bin/activate
 
 # Install dependencies
 # Option 1: From pyproject.toml (recommended)
@@ -27,7 +27,7 @@ python -c "from src.db import init_db; init_db()"
 
 # Frontend
 cd ../frontend
-npm install
+pnpm install
 ```
 
 ### Running
@@ -39,7 +39,7 @@ uvicorn src.app:app --reload --port 8000
 
 # Frontend (Terminal 2)
 cd frontend
-npm run dev
+pnpm run dev
 ```
 
 ### Ingestion
