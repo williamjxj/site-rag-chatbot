@@ -1,7 +1,25 @@
 /** Admin API client */
 
 import { apiRequest } from "./base";
-import type { DocumentListResponse, DeleteResponse, UploadResponse } from "../utils/types";
+import type {
+  DocumentListResponse,
+  DeleteResponse,
+  UploadResponse,
+} from "../utils/types";
+
+export interface ConfigResponse {
+  embedding_provider: "openai" | "local" | "";
+  embedding_model?: string;
+  available_providers: Array<{
+    value: "openai" | "local";
+    label: string;
+    description?: string;
+  }>;
+}
+
+export interface UpdateConfigRequest {
+  embedding_provider: "openai" | "local";
+}
 
 export async function listDocuments(
   source?: "web" | "file",
@@ -42,4 +60,17 @@ export async function uploadDocument(file: File): Promise<UploadResponse> {
   }
 
   return response.json();
+}
+
+export async function getEmbeddingProvider(): Promise<ConfigResponse> {
+  return apiRequest<ConfigResponse>("/admin/config/embedding-provider");
+}
+
+export async function updateEmbeddingProvider(
+  provider: "openai" | "local"
+): Promise<ConfigResponse> {
+  return apiRequest<ConfigResponse>("/admin/config/embedding-provider", {
+    method: "PUT",
+    body: JSON.stringify({ embedding_provider: provider }),
+  });
 }

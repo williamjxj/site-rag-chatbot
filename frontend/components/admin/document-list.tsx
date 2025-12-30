@@ -40,16 +40,26 @@ export const DocumentList = forwardRef<DocumentListRef>((props, ref) => {
   }));
 
   const handleDelete = async (uri: string) => {
-    if (!confirm(`Are you sure you want to delete this document?\n\n${uri}`)) {
+    if (!confirm(`Are you sure you want to delete this document and all its chunks from the database?\n\n${uri}`)) {
       return;
     }
 
     setDeleting(uri);
     try {
-      await deleteDocument(uri);
-      await loadDocuments(); // Reload list
+      const response = await deleteDocument(uri);
+      // Show success message
+      console.log(`Deleted ${response.chunks_deleted} chunks for document: ${uri}`);
+      
+      // Optimistically remove from UI immediately
+      setDocuments((prev) => prev.filter((doc) => doc.uri !== uri));
+      
+      // Reload from server to ensure consistency and verify deletion
+      await loadDocuments();
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to delete document");
+      // On error, reload to show actual state
+      await loadDocuments();
+      const errorMessage = err instanceof Error ? err.message : "Failed to delete document";
+      alert(`Error: ${errorMessage}\n\nThe document list has been refreshed.`);
     } finally {
       setDeleting(null);
     }

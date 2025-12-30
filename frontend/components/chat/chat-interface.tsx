@@ -50,8 +50,8 @@ export function ChatInterface() {
   };
 
   return (
-    <div className="flex flex-col h-screen">
-      <div className="flex-1 overflow-y-auto">
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto min-h-0">
         <MessageList messages={messages} />
         {isLoading && (
           <div className="flex justify-start p-4">
@@ -61,7 +61,7 @@ export function ChatInterface() {
           </div>
         )}
       </div>
-      <div className="border-t p-4">
+      <div className="border-t p-4 flex-shrink-0">
         <MessageInput onSend={handleSend} disabled={isLoading} />
         {error && (
           <p className="mt-2 text-sm text-destructive" role="alert">

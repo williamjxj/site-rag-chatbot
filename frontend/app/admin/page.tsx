@@ -1,43 +1,43 @@
 "use client";
 
-import { useRef } from "react";
-import { IngestionStatus } from "@/components/admin/ingestion-status";
-import { UploadForm } from "@/components/admin/upload-form";
-import { DocumentList } from "@/components/admin/document-list";
+import { useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ContentManagementTab } from "@/components/admin/content-management-tab";
+import { SettingsTab } from "@/components/admin/settings-tab";
+import { SystemStatusTab } from "@/components/admin/system-status-tab";
 
+/**
+ * AdminPage component with organized tabs for content management.
+ * Three tabs: Content Management, Settings, System Status
+ */
 export default function AdminPage() {
-  const documentListRef = useRef<{ refresh: () => void }>(null);
-
-  const handleUpload = () => {
-    // Refresh document list after upload
-    documentListRef.current?.refresh();
-  };
+  const [activeTab, setActiveTab] = useState("content");
 
   return (
     <main className="container mx-auto p-8">
-      <div className="space-y-8">
-        <header>
-          <h1 className="text-3xl font-bold">Admin - Content Management</h1>
-          <p className="text-muted-foreground mt-2">
-            Manage knowledge base content and trigger ingestion
-          </p>
-        </header>
+      <header className="mb-6">
+        <h1 className="text-3xl font-bold">Admin - Content Management</h1>
+        <p className="text-muted-foreground mt-2">
+          Manage knowledge base content and configure settings
+        </p>
+      </header>
 
-        <section>
-          <h2 className="text-2xl font-semibold mb-4">Ingest Content</h2>
-          <IngestionStatus onIngestComplete={handleUpload} />
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-semibold mb-4">Upload Documents</h2>
-          <UploadForm onUpload={handleUpload} />
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-semibold mb-4">Manage Documents</h2>
-          <DocumentList ref={documentListRef} />
-        </section>
-      </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList>
+          <TabsTrigger value="content">Content Management</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
+          <TabsTrigger value="status">System Status</TabsTrigger>
+        </TabsList>
+        <TabsContent value="content" className="mt-6">
+          <ContentManagementTab key={activeTab === "content" ? "active" : "inactive"} />
+        </TabsContent>
+        <TabsContent value="settings" className="mt-6">
+          <SettingsTab />
+        </TabsContent>
+        <TabsContent value="status" className="mt-6">
+          <SystemStatusTab />
+        </TabsContent>
+      </Tabs>
     </main>
   );
 }

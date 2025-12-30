@@ -1,12 +1,20 @@
 "use client";
 
+import React from "react";
 import type { Message } from "@/lib/utils/types";
+import { MarkdownRenderer } from "./markdown-renderer";
 
 interface MessageListProps {
   messages: Message[];
 }
 
-export function MessageList({ messages }: MessageListProps) {
+/**
+ * MessageList component displays chat messages with markdown rendering.
+ * User questions are displayed on the right, answers on the left with markdown formatting.
+ */
+export const MessageList = React.memo(function MessageList({
+  messages,
+}: MessageListProps) {
   if (messages.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -31,7 +39,11 @@ export function MessageList({ messages }: MessageListProps) {
                 : "bg-muted"
             }`}
           >
-            <p className="whitespace-pre-wrap">{message.content}</p>
+            {message.type === "question" ? (
+              <p className="whitespace-pre-wrap">{message.content}</p>
+            ) : (
+              <MarkdownRenderer content={message.content} />
+            )}
             {message.sources && message.sources.length > 0 && (
               <div className="mt-2 pt-2 border-t border-border/50">
                 <p className="text-xs font-semibold mb-1">Sources:</p>
@@ -49,4 +61,4 @@ export function MessageList({ messages }: MessageListProps) {
       ))}
     </div>
   );
-}
+});
