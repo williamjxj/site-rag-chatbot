@@ -75,3 +75,58 @@ def validate_api_keys() -> None:
             "At least one API key must be configured. "
             "Please set either OPENAI_API_KEY or DEEPSEEK_API_KEY in your environment variables."
         )
+
+
+def update_embedding_provider(value: str) -> None:
+    """
+    Update embedding provider in .env file and in-memory settings.
+    
+    Args:
+        value: Embedding provider value ("openai" or "local")
+    
+    Raises:
+        ValueError: If value is not "openai" or "local"
+        IOError: If .env file cannot be read or written
+    """
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
+    if value not in ["openai", "local"]:
+        raise ValueError(f"Invalid embedding provider: {value}. Must be 'openai' or 'local'.")
+    
+    # Update in-memory settings
+    settings.embedding_provider = value
+    
+    # Update .env file
+    env_file = BACKEND_DIR / ".env"
+    
+    # Read current .env file if it exists
+    lines = []
+    if env_file.exists():
+        try:
+            with open(env_file, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+        except IOError as e:
+            logger.error(f"Failed to read .env file: {e}")
+            raise IOError(f"Failed to read .env file: {e}") from e
+    
+    # Update or add EMBEDDING_PROVIDER line
+    updated = False
+    for i, line in enumerate(lines):
+        if line.strip().startswith("EMBEDDING_PROVIDER="):
+            lines[i] = f"EMBEDDING_PROVIDER={value}\n"
+            updated = True
+            break
+    
+    if not updated:
+        lines.append(f"EMBEDDING_PROVIDER={value}\n")
+    
+    # Write back to .env file
+    try:
+        with open(env_file, "w", encoding="utf-8") as f:
+            f.writelines(lines)
+        logger.info(f"Updated EMBEDDING_PROVIDER to {value} in .env file")
+    except IOError as e:
+        logger.error(f"Failed to write .env file: {e}")
+        raise IOError(f"Failed to write .env file: {e}") from e

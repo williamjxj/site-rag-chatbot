@@ -7,9 +7,18 @@ from fastapi import APIRouter, HTTPException, status, Query, UploadFile, File
 from fastapi.responses import JSONResponse
 
 from ...db import SessionLocal, Chunk
-from ...config import settings
+from ...config import settings, update_embedding_provider
 from ...ingest.pipeline import ingest_single_file
-from ..models import Document, DocumentListResponse, DeleteResponse, ErrorResponse, UploadResponse
+from ..models import (
+    Document,
+    DocumentListResponse,
+    DeleteResponse,
+    ErrorResponse,
+    UploadResponse,
+    ConfigResponse,
+    UpdateConfigRequest,
+    ProviderOption,
+)
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -198,10 +207,10 @@ async def delete_all_documents() -> DeleteResponse:
 @router.delete("/documents/{document_id:path}", response_model=DeleteResponse, status_code=status.HTTP_200_OK)
 async def delete_document(document_id: str) -> DeleteResponse:
     """
-    Delete a document and all its chunks from the knowledge base.
+    Delete a document and all its chunks from the knowledge base (including pgvector embeddings).
 
     Args:
-        document_id: URI of the document to delete
+        document_id: URI of the document to delete (URL-decoded)
 
     Returns:
         Delete response with number of chunks deleted
@@ -209,30 +218,148 @@ async def delete_document(document_id: str) -> DeleteResponse:
     Raises:
         HTTPException: If document not found or deletion fails
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # URL decode the document_id in case it was encoded
+    from urllib.parse import unquote
+    decoded_uri = unquote(document_id)
+    
+    logger.info(f"Deleting document with URI: {decoded_uri}")
+    
     with SessionLocal() as db:
-        # Find chunks by URI
-        chunks = db.execute(
-            select(Chunk).where(Chunk.uri == document_id)
-        ).scalars().all()
+        try:
+            # Find chunks by URI (exact match)
+            chunks = db.execute(
+                select(Chunk).where(Chunk.uri == decoded_uri)
+            ).scalars().all()
 
-        if not chunks:
+            if not chunks:
+                logger.warning(f"No chunks found for URI: {decoded_uri}")
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail={
+                        "error": "NOT_FOUND",
+                        "message": f"Document not found: {decoded_uri}",
+                        "details": None,
+                    },
+                )
+
+            chunk_count = len(chunks)
+            logger.info(f"Found {chunk_count} chunks to delete for URI: {decoded_uri}")
+            
+            # Delete all chunks (this also deletes the embeddings from pgvector)
+            for chunk in chunks:
+                db.delete(chunk)
+            
+            # Commit the transaction
+            db.commit()
+            
+            # Verify deletion worked
+            remaining = db.execute(
+                select(func.count(Chunk.id)).where(Chunk.uri == decoded_uri)
+            ).scalar() or 0
+            
+            if remaining > 0:
+                logger.error(f"Deletion verification failed: {remaining} chunks still exist for URI: {decoded_uri}")
+                db.rollback()
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail={
+                        "error": "DELETION_VERIFICATION_FAILED",
+                        "message": f"Failed to delete all chunks. {remaining} chunks still exist.",
+                        "details": None,
+                    },
+                )
+            
+            logger.info(f"Successfully deleted {chunk_count} chunks for URI: {decoded_uri}")
+
+            return DeleteResponse(
+                ok=True,
+                message=f"Document deleted successfully. Removed {chunk_count} chunks from database and pgvector.",
+                chunks_deleted=chunk_count,
+            )
+        except HTTPException:
+            # Re-raise HTTP exceptions as-is
+            raise
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Error deleting document {decoded_uri}: {e}", exc_info=True)
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail={
-                    "error": "NOT_FOUND",
-                    "message": f"Document not found: {document_id}",
+                    "error": "DELETION_ERROR",
+                    "message": f"Failed to delete document: {str(e)}",
                     "details": None,
                 },
-            )
+            ) from e
 
-        chunk_count = len(chunks)
-        # Delete all chunks
-        for chunk in chunks:
-            db.delete(chunk)
-        db.commit()
 
-        return DeleteResponse(
-            ok=True,
-            message=f"Document deleted successfully",
-            chunks_deleted=chunk_count,
-        )
+@router.get("/config/embedding-provider", response_model=ConfigResponse, status_code=status.HTTP_200_OK)
+async def get_embedding_provider() -> ConfigResponse:
+    """
+    Get current embedding provider configuration.
+    
+    Returns:
+        ConfigResponse with current provider, model, and available options
+    """
+    provider = settings.embedding_provider or ""
+    model = (
+        settings.embedding_model
+        if provider == "openai"
+        else settings.free_embedding_model
+    )
+    
+    return ConfigResponse(
+        embedding_provider=provider,
+        embedding_model=model,
+        available_providers=[
+            ProviderOption(
+                value="openai",
+                label="OpenAI (text-embedding-3-small)",
+                description="Uses OpenAI API for embeddings. Requires API key.",
+            ),
+            ProviderOption(
+                value="local",
+                label="Sentence Transformers (all-MiniLM-L6-v2)",
+                description="Uses local sentence-transformers model. No API key required.",
+            ),
+        ],
+    )
+
+
+@router.put("/config/embedding-provider", response_model=ConfigResponse, status_code=status.HTTP_200_OK)
+async def update_embedding_provider_config(request: UpdateConfigRequest) -> ConfigResponse:
+    """
+    Update embedding provider configuration.
+    
+    Args:
+        request: UpdateConfigRequest with new provider value
+    
+    Returns:
+        ConfigResponse with updated configuration
+    
+    Raises:
+        HTTPException: If provider value is invalid or update fails
+    """
+    try:
+        update_embedding_provider(request.embedding_provider)
+        return await get_embedding_provider()
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "INVALID_PROVIDER",
+                "message": str(e),
+                "details": None,
+            },
+        ) from e
+    except IOError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": "CONFIG_UPDATE_ERROR",
+                "message": f"Failed to update configuration: {str(e)}",
+                "details": None,
+            },
+        ) from e

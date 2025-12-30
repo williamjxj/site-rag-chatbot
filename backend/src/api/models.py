@@ -76,3 +76,25 @@ class ErrorResponse(BaseModel):
     error: str = Field(..., description="Error type or code")
     message: str = Field(..., description="Human-readable error message")
     details: dict | None = Field(None, description="Additional error details")
+
+
+class ProviderOption(BaseModel):
+    """Provider option model for configuration response."""
+
+    value: str = Field(..., enum=["openai", "local"], description="Provider identifier")
+    label: str = Field(..., description="Human-readable provider name")
+    description: str | None = Field(None, description="Optional description of the provider")
+
+
+class ConfigResponse(BaseModel):
+    """Response model for embedding provider configuration endpoints."""
+
+    embedding_provider: str = Field(..., enum=["openai", "local", ""], description="Current embedding provider. Empty string means auto-detect.")
+    embedding_model: str | None = Field(None, description="Current embedding model name (derived from provider)")
+    available_providers: list[ProviderOption] = Field(..., description="List of available embedding providers with metadata")
+
+
+class UpdateConfigRequest(BaseModel):
+    """Request model for updating embedding provider configuration."""
+
+    embedding_provider: str = Field(..., enum=["openai", "local"], description="Embedding provider to use. Must be either 'openai' or 'local'.")
