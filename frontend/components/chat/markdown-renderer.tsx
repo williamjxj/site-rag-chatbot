@@ -26,9 +26,10 @@ export function MarkdownRenderer({ content }: { content: string }) {
           rehypePlugins={[rehypeHighlight, rehypeSanitize]}
           components={{
           // Style code blocks
-          code: ({ inline, className, children, ...props }) => {
+          code: ({ className, children, ...props }) => {
             const match = /language-(\w+)/.exec(className || "");
-            return !inline && match ? (
+            const isInline = !className || !match;
+            return !isInline ? (
               <code
                 className={`${className} block rounded-md bg-muted p-4 text-sm font-mono overflow-x-auto`}
                 {...props}

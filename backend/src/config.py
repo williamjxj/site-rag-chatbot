@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     # Chat LLM
     chat_model: str = os.getenv("CHAT_MODEL", "deepseek-chat")
     deepseek_api_key: str = os.getenv("DEEPSEEK_API_KEY", "")
+    kimi_api_key: str = os.getenv("KIMI_API_KEY", "")
+    minimax_api_key: str = os.getenv("MINIMAX_API_KEY", "")
+    active_llm: str = os.getenv("ACTIVE_LLM", "kimi")  # deepseek | kimi | minimax
 
     # Vector store
     vector_store: str = os.getenv("VECTOR_STORE", "memory")
@@ -58,28 +61,30 @@ class Settings(BaseSettings):
     # Logging
     log_level: str = os.getenv("LOG_LEVEL", "INFO")
 
+    jwt_secret_key: str = os.getenv("JWT_SECRET_KEY", "dev-secret-change-in-production")
+
     class Config:
         """Pydantic config."""
 
         env_file = str(ENV_FILE) if ENV_FILE.exists() else None
         case_sensitive = False
+        extra = "ignore"
 
 
 settings = Settings()
 
 
 def validate_api_keys() -> None:
-    """
-    Validate that at least one API key is configured.
-
-    Raises:
-        ValueError: If neither OPENAI_API_KEY nor DEEPSEEK_API_KEY is set
-    """
-    if not settings.openai_api_key and not settings.deepseek_api_key:
-        raise ValueError(
-            "At least one API key must be configured. "
-            "Please set either OPENAI_API_KEY or DEEPSEEK_API_KEY in your environment variables."
-        )
+    """Validate that at least one LLM API key is configured based on active_llm."""
+    provider = settings.active_llm
+    if provider == "deepseek" and not settings.deepseek_api_key:
+        raise ValueError("DEEPSEEK_API_KEY must be set when ACTIVE_LLM=deepseek")
+    elif provider == "kimi" and not settings.kimi_api_key:
+        raise ValueError("KIMI_API_KEY must be set when ACTIVE_LLM=kimi")
+    elif provider == "minimax" and not settings.minimax_api_key:
+        raise ValueError("MINIMAX_API_KEY must be set when ACTIVE_LLM=minimax")
+    elif provider not in ("deepseek", "kimi", "minimax"):
+        raise ValueError(f"Invalid ACTIVE_LLM: {provider}. Must be one of: deepseek, kimi, minimax")
 
 
 def update_embedding_provider(value: str) -> None:

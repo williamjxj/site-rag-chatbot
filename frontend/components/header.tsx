@@ -34,6 +34,12 @@ export function Header() {
           >
             Admin
           </Link>
+          <Link
+            href="/profile"
+            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Profile
+          </Link>
         </nav>
       </div>
     </header>

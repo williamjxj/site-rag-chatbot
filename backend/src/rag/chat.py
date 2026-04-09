@@ -81,14 +81,28 @@ def answer(question: str) -> dict[str, str | list[str]]:
     logger.info(f"Building prompt with {len(context_blocks)} context blocks ({total_chars} chars)")
     user_prompt = build_prompt(question, context_blocks)
 
-    # Use DeepSeek API key, fallback to OpenAI API key if not set
-    logger.info("Calling chat LLM API to generate answer")
-    api_key = settings.deepseek_api_key or settings.openai_api_key
+    # Get LLM configuration based on active_llm
+    logger.info(f"Calling chat LLM API ({settings.active_llm}) to generate answer")
+    provider = settings.active_llm
+    
+    if provider == "deepseek":
+        api_key = settings.deepseek_api_key
+        base_url = "https://api.deepseek.com/v1"
+        model = "deepseek-chat"
+    elif provider == "kimi":
+        api_key = settings.kimi_api_key
+        base_url = "https://api.moonshot.ai/v1"
+        model = "kimi-k2.5"
+    elif provider == "minimax":
+        api_key = settings.minimax_api_key
+        base_url = "https://api.minimax.chat/v1"
+        model = "abab6.5s-chat"
+    else:
+        raise ValueError(f"Unknown ACTIVE_LLM: {provider}")
+    
     if not api_key:
-        raise ValueError("Either DEEPSEEK_API_KEY or OPENAI_API_KEY must be set")
-
-    # Determine API endpoint from configuration
-    base_url = settings.openai_base_url or "https://api.openai.com/v1"
+        raise ValueError(f"{provider.upper()}_API_KEY must be set for ACTIVE_LLM={provider}")
+    
     api_url = f"{base_url}/chat/completions"
 
     # Call chat LLM API with error handling
@@ -100,7 +114,7 @@ def answer(question: str) -> dict[str, str | list[str]]:
                 "Content-Type": "application/json",
             },
             json={
-                "model": settings.chat_model,
+                "model": model,
                 "messages": [
                     {"role": "system", "content": SYSTEM_PROMPT},
                     {"role": "user", "content": user_prompt},

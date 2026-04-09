@@ -10,7 +10,6 @@ export const metadata: Metadata = {
   description: "Chatbot powered by RAG for website content",
   icons: {
     icon: "/favicon.svg",
-    type: "image/svg+xml",
   },
 };
 
