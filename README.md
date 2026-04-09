@@ -23,6 +23,14 @@ The system is fully functional and ready for use. See [docs/implementation-summa
 - **Chat Interface**: Ask questions and get answers based on ingested content
   - **Markdown Rendering**: Chat responses support rich markdown formatting with syntax highlighting for code blocks
   - **Professional UI**: Branded experience with logo and favicon
+- **User Authentication**: JWT-based authentication
+  - **Sign Up / Sign In**: User registration and login at `/auth/signup` and `/auth/signin`
+  - **Profile**: View account details at `/profile`
+  - **Protected Routes**: Chat and admin pages require authentication
+- **Multi-LLM Support**: Switch between LLM providers via `ACTIVE_LLM` environment variable
+  - **DeepSeek**: `https://api.deepseek.com/v1` (model: `deepseek-chat`)
+  - **Kimi**: `https://api.moonshot.cn/v1` (model: `moonshot-v1-8k`)
+  - **MiniMax**: `https://api.minimax.chat/v1` (model: `abab6.5s-chat`)
 - **Content Ingestion**: Ingest content from static websites (via sitemap) and documents (.md, .pdf, .txt)
 - **Heading-Aware Chunking**: Markdown files are chunked by semantic sections, preserving document structure
 - **Vector Search**: Semantic search using PostgreSQL + pgvector
@@ -44,9 +52,10 @@ The system is fully functional and ready for use. See [docs/implementation-summa
 
 ## Tech Stack
 
-- **Backend**: Python 3.10+, FastAPI, SQLAlchemy, pgvector, OpenAI Embeddings (text-embedding-3-small), Sentence Transformers (local), Deepseek API
+- **Backend**: Python 3.10+, FastAPI, SQLAlchemy, pgvector, OpenAI Embeddings (text-embedding-3-small), Sentence Transformers (local), DeepSeek/Kimi/MiniMax API
 - **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS, shadcn/ui, react-markdown
 - **Database**: PostgreSQL 16 with pgvector extension
+- **Authentication**: JWT (python-jose, passlib/bcrypt)
 
 ## Quick Start
 
@@ -55,8 +64,9 @@ The system is fully functional and ready for use. See [docs/implementation-summa
 - Python 3.10+
 - Node.js 18+
 - Docker and Docker Compose
-- OpenAI API key (for embeddings)
-- Deepseek API key (for chat)
+- API keys (at least one of):
+  - **For Chat**: DeepSeek, Kimi, or MiniMax API key
+  - **For Embeddings**: OpenAI API key or use free local embeddings (sentence-transformers)
 
 ### Setup
 
@@ -373,8 +383,18 @@ site-rag-chatbot/
 
 ## API Endpoints
 
-- `POST /chat` - Ask a question and get an answer
+### Chat
+- `POST /chat` - Ask a question and get an answer (requires authentication)
+
+### Authentication
+- `POST /api/auth/register` - Register a new user
+- `POST /api/auth/login` - Login and get JWT token
+- `GET /api/auth/me` - Get current user profile (requires authentication)
+
+### Content Ingestion
 - `POST /ingest` - Trigger content ingestion
+
+### Admin
 - `GET /admin/documents` - List ingested documents (with optional source filter)
 - `DELETE /admin/documents/{id}` - Remove a document
 - `GET /admin/config/embedding-provider` - Get current embedding provider configuration
@@ -383,15 +403,27 @@ site-rag-chatbot/
 
 ## Usage
 
+### Getting Started
+
+1. Open http://localhost:3000
+2. Click **Sign Up** to create an account
+3. Login with your credentials
+
 ### Chat Interface
 
 1. Open http://localhost:3000
 2. Type a question in the chat interface
 3. Receive answers with source citations
 
+### Authentication
+
+- **Sign Up**: http://localhost:3000/auth/signup
+- **Sign In**: http://localhost:3000/auth/signin
+- **Profile**: http://localhost:3000/profile (view account details, sign out)
+
 ### Admin Interface
 
-1. Open http://localhost:3000/admin
+1. Open http://localhost:3000/admin (requires login)
 2. **Content Management Tab**:
    - **Upload Documents**: Upload PDF, Markdown, or text files
    - **Manage Documents**: View, filter, and delete documents from the knowledge base
@@ -518,12 +550,14 @@ sequenceDiagram
 Edit `backend/.env`:
 - `SITEMAP_URL`: URL to your website's sitemap.xml
 - `DOCS_DIR`: Path to directory containing .md, .pdf, .txt files
-- `LLM_PROVIDER`: Provider name (e.g., "deepseek" or "openai")
-- `OPENAI_BASE_URL`: Base URL for OpenAI-compatible API (e.g., "https://api.deepseek.com")
-- `OPENAI_API_KEY`: Your API key for embeddings and chat
 - `VECTOR_STORE`: Vector store type ("memory" for dev, "pgvector" for production)
 - `EMBEDDING_PROVIDER`: Embedding provider ("openai" for text-embedding-3-small, "local" for sentence-transformers, or "" for auto-detect)
   - Can be updated via the admin interface (Settings tab) without restarting the backend
+- `ACTIVE_LLM`: LLM provider for chat ("deepseek", "kimi", or "minimax", default: "kimi")
+- `DEEPSEEK_API_KEY`: DeepSeek API key (required if ACTIVE_LLM=deepseek)
+- `KIMI_API_KEY`: Kimi/Moonshot API key (required if ACTIVE_LLM=kimi)
+- `MINIMAX_API_KEY`: MiniMax API key (required if ACTIVE_LLM=minimax)
+- `JWT_SECRET_KEY`: Secret key for JWT token generation (change in production)
 
 ## Backend Dependencies
 

@@ -18,8 +18,9 @@ A complete RAG (Retrieval Augmented Generation) chatbot application that ingests
 - **Framework**: FastAPI (Python 3.10+)
 - **Database**: PostgreSQL 16 with pgvector extension
 - **ORM**: SQLAlchemy 2.0
-- **Embeddings**: OpenAI `text-embedding-3-small` (1536 dimensions)
-- **LLM**: Deepseek API for chat generation
+- **Embeddings**: OpenAI `text-embedding-3-small` (1536 dimensions) or local sentence-transformers
+- **LLM**: DeepSeek, Kimi, or MiniMax API for chat generation (configurable via `ACTIVE_LLM`)
+- **Authentication**: JWT (python-jose, bcrypt)
 - **Validation**: Pydantic v2
 
 **Frontend**:
@@ -43,12 +44,13 @@ A complete RAG (Retrieval Augmented Generation) chatbot application that ingests
 │  (Port 8000)    │
 └────────┬────────┘
          │
-    ┌────┴────┐
-    │         │
+     ┌────┴────┐
+     │         │
 ┌───▼───┐ ┌──▼──────┐
-│  DB   │ │ OpenAI  │
+│  DB   │ │ LLM API │
 │Postgres│ │Deepseek │
-│pgvector│ │   API   │
+│pgvector│ │Kimi    │
+│        │ │MiniMax │
 └────────┘ └─────────┘
 ```
 
@@ -198,6 +200,7 @@ class Chunk:
     heading_path: JSON | None  # Heading breadcrumb path for markdown chunks (list of strings)
     text: str                  # Chunk text content
     text_hash: str             # SHA-256 hash for change detection
+    user_id: int | None        # Owner user ID for multi-tenant isolation
     embedding: Vector(1536)    # Vector embedding
     created_at: datetime
     updated_at: datetime
@@ -208,6 +211,7 @@ class Chunk:
 - `idx_chunks_source` - Filter by source type
 - `idx_chunks_uri` - Find chunks by document
 - `idx_chunks_text_hash` - Change detection
+- `idx_chunks_user_id` - Filter by user (multi-tenant)
 - `idx_chunks_embedding` - Vector similarity search (IVFFlat)
 
 ## API Endpoints
@@ -233,6 +237,19 @@ class Chunk:
 - **DELETE** `/admin/documents/{id}` - Delete document
   - Response: `{ "ok": true, "message": "...", "chunks_deleted": 0 }`
 
+### Authentication
+
+- **POST** `/api/auth/register` - Register new user
+  - Request: `{ "email": "...", "username": "...", "password": "..." }`
+  - Response: `{ "user": {...}, "message": "..." }`
+
+- **POST** `/api/auth/login` - Login
+  - Request: `{ "username": "...", "password": "..." }`
+  - Response: `{ "access_token": "...", "token_type": "bearer", "user": {...} }`
+
+- **GET** `/api/auth/me` - Get current user (requires authentication)
+  - Response: `{ "id": ..., "email": "...", "username": "...", ... }`
+
 ## Key Design Decisions
 
 ### Chunking Strategy
@@ -249,8 +266,12 @@ class Chunk:
 
 ### LLM Choice
 
-- **Provider**: Deepseek API
-- **Model**: `deepseek-chat`
+- **Provider**: DeepSeek, Kimi, or MiniMax (configurable via `ACTIVE_LLM` environment variable)
+- **Default**: Kimi (`moonshot-v1-8k`)
+- **Options**:
+  - DeepSeek: `https://api.deepseek.com/v1`, model: `deepseek-chat`
+  - Kimi: `https://api.moonshot.cn/v1`, model: `moonshot-v1-8k`
+  - MiniMax: `https://api.minimax.chat/v1`, model: `abab6.5s-chat`
 - **Rationale**: User preference, cost-effective, good RAG performance
 
 ### Vector Database
@@ -384,8 +405,9 @@ site-rag-chatbot/
 - Python 3.10+
 - Node.js 18+
 - Docker and Docker Compose
-- OpenAI API key
-- Deepseek API key
+- API keys:
+  - **LLM**: DeepSeek, Kimi, or MiniMax API key
+  - **Embeddings**: OpenAI API key (or use free local sentence-transformers)
 
 ### Environment Variables
 
@@ -394,15 +416,24 @@ site-rag-chatbot/
 DATABASE_URL=postgresql+psycopg://rag:rag@localhost:5432/rag
 SITEMAP_URL=https://example.com/sitemap.xml
 DOCS_DIR=./docs
-# OpenAI-compatible provider (DeepSeek or OpenAI)
-LLM_PROVIDER=deepseek
-OPENAI_BASE_URL=https://api.deepseek.com
-OPENAI_API_KEY=your_key
-EMBEDDING_MODEL=text-embedding-3-small
-CHAT_MODEL=deepseek-chat
-VECTOR_STORE=memory
+VECTOR_STORE=pgvector
 TOP_K=6
 MAX_CONTEXT_CHARS=12000
+
+# Embeddings (choose one)
+EMBEDDING_PROVIDER=local  # Free: sentence-transformers
+# or
+EMBEDDING_PROVIDER=openai  # Paid: text-embedding-3-small
+OPENAI_API_KEY=your_key
+
+# LLM (choose one via ACTIVE_LLM)
+ACTIVE_LLM=kimi  # Options: deepseek, kimi, minimax
+DEEPSEEK_API_KEY=your_deepseek_key
+KIMI_API_KEY=your_kimi_key
+MINIMAX_API_KEY=your_minimax_key
+
+# Authentication
+JWT_SECRET_KEY=your_secret_key
 ```
 
 **Frontend** (`frontend/.env.local`):
@@ -415,17 +446,19 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 - Use managed PostgreSQL with pgvector
 - Set up proper environment variable management
 - Configure CORS for production domain
-- Add API authentication
 - Set up monitoring and logging
 - Optimize vector index parameters for scale
 - Consider CDN for frontend assets
+- Change JWT_SECRET_KEY in production
 
 ## Conclusion
 
-The Site RAG Chatbot is a fully functional MVP with all three user stories implemented:
+The Site RAG Chatbot is a fully functional application with all user stories implemented:
 
-1. ✅ **Chat Interface**: Users can ask questions and receive answers
-2. ✅ **Content Ingestion**: Administrators can ingest website and document content
-3. ✅ **Content Management**: Administrators can view and manage the knowledge base
+1. ✅ **User Authentication**: JWT-based auth with signup, login, and profile pages
+2. ✅ **Chat Interface**: Users can ask questions and receive answers with source citations
+3. ✅ **Content Ingestion**: Administrators can ingest website and document content
+4. ✅ **Content Management**: Administrators can view and manage the knowledge base
+5. ✅ **Multi-LLM Support**: Switch between DeepSeek, Kimi, and MiniMax LLMs
 
-The system is ready for testing and can be extended with additional features, optimizations, and comprehensive test coverage as needed.
+The system supports both authenticated users and multi-LLM configuration, ready for testing and extension.

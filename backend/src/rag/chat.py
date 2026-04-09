@@ -91,8 +91,8 @@ def answer(question: str) -> dict[str, str | list[str]]:
         model = "deepseek-chat"
     elif provider == "kimi":
         api_key = settings.kimi_api_key
-        base_url = "https://api.moonshot.ai/v1"
-        model = "kimi-k2.5"
+        base_url = "https://api.moonshot.cn/v1"
+        model = "moonshot-v1-8k"
     elif provider == "minimax":
         api_key = settings.minimax_api_key
         base_url = "https://api.minimax.chat/v1"
