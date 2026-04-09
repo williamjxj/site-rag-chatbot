@@ -9,7 +9,8 @@
     "lint": "next lint",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "snapshots": "playwright test tests/e2e/snapshots.spec.ts --project=chromium"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.0.5",
@@ -17,6 +18,8 @@
     "@radix-ui/react-tabs": "^1.1.13",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
+    "framer-motion": "^12.38.0",
+    "gsap": "^3.14.2",
     "highlight.js": "^11.11.1",
     "lucide-react": "^0.294.0",
     "next": "^14.0.0",

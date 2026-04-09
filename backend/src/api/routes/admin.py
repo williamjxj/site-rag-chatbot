@@ -3,11 +3,12 @@
 import shutil
 from pathlib import Path
 
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy import func, select, text
 
+from ...auth import decode_token
 from ...config import settings, update_embedding_provider
-from ...db import Chunk, SessionLocal
+from ...db import Chunk, SessionLocal, User
 from ...ingest.pipeline import ingest_single_file
 from ..models import (
     ConfigResponse,
@@ -18,6 +19,7 @@ from ..models import (
     UpdateConfigRequest,
     UploadResponse,
 )
+from .auth import get_current_user
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -27,20 +29,9 @@ async def list_documents(
     source: str | None = Query(None, enum=["web", "file"], description="Filter by source type"),
     limit: int = Query(100, ge=1, le=1000, description="Maximum number of documents"),
     offset: int = Query(0, ge=0, description="Number of documents to skip"),
+    current_user: User = Depends(get_current_user),
 ) -> DocumentListResponse:
-    """
-    List all ingested documents with metadata.
-
-    Args:
-        source: Optional filter by source type
-        limit: Maximum number of documents to return
-        offset: Number of documents to skip
-
-    Returns:
-        Document list response with documents and pagination info
-    """
     with SessionLocal() as db:
-        # Build query
         query = select(
             Chunk.uri,
             Chunk.source,
@@ -48,7 +39,7 @@ async def list_documents(
             func.count(Chunk.id).label("chunk_count"),
             func.min(Chunk.created_at).label("first_ingested_at"),
             func.max(Chunk.updated_at).label("last_updated_at"),
-        ).group_by(Chunk.uri, Chunk.source)
+        ).where(Chunk.user_id == current_user.id).group_by(Chunk.uri, Chunk.source)
 
         if source:
             query = query.where(Chunk.source == source)
@@ -84,7 +75,10 @@ async def list_documents(
 
 
 @router.post("/upload", response_model=UploadResponse, status_code=status.HTTP_200_OK)
-async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
+async def upload_document(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+) -> UploadResponse:
     """
     Upload a document file and immediately ingest it.
 
@@ -150,7 +144,7 @@ async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
 
     # Ingest the uploaded file
     try:
-        chunks_ingested = ingest_single_file(file_path)
+        chunks_ingested = ingest_single_file(file_path, current_user.id)
         return UploadResponse(
             ok=True,
             message="File uploaded and ingested successfully",
@@ -174,30 +168,19 @@ async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
 
 
 @router.delete("/documents", response_model=DeleteResponse, status_code=status.HTTP_200_OK)
-async def delete_all_documents() -> DeleteResponse:
-    """
-    Delete all documents and chunks from the knowledge base.
-
-    Returns:
-        Delete response with number of chunks deleted
-
-    Raises:
-        HTTPException: If deletion fails
-    """
+async def delete_all_documents(current_user: User = Depends(get_current_user)) -> DeleteResponse:
     with SessionLocal() as db:
         try:
-            # Get count before deletion
-            from sqlalchemy import func, select
+            chunk_count = db.execute(
+                select(func.count(Chunk.id)).where(Chunk.user_id == current_user.id)
+            ).scalar() or 0
 
-            chunk_count = db.execute(select(func.count(Chunk.id))).scalar() or 0
-
-            # Delete all chunks
-            db.execute(text("DELETE FROM chunks;"))
+            db.execute(text("DELETE FROM chunks WHERE user_id = :user_id;"), {"user_id": current_user.id})
             db.commit()
 
             return DeleteResponse(
                 ok=True,
-                message="All documents deleted successfully",
+                message="All your documents deleted successfully",
                 chunks_deleted=chunk_count,
             )
         except Exception as e:
@@ -215,24 +198,14 @@ async def delete_all_documents() -> DeleteResponse:
 @router.delete(
     "/documents/{document_id:path}", response_model=DeleteResponse, status_code=status.HTTP_200_OK
 )
-async def delete_document(document_id: str) -> DeleteResponse:
-    """
-    Delete a document and all its chunks from the knowledge base (including pgvector embeddings).
-
-    Args:
-        document_id: URI of the document to delete (URL-decoded)
-
-    Returns:
-        Delete response with number of chunks deleted
-
-    Raises:
-        HTTPException: If document not found or deletion fails
-    """
+async def delete_document(
+    document_id: str,
+    current_user: User = Depends(get_current_user),
+) -> DeleteResponse:
     import logging
 
     logger = logging.getLogger(__name__)
 
-    # URL decode the document_id in case it was encoded
     from urllib.parse import unquote
 
     decoded_uri = unquote(document_id)
@@ -241,8 +214,10 @@ async def delete_document(document_id: str) -> DeleteResponse:
 
     with SessionLocal() as db:
         try:
-            # Find chunks by URI (exact match)
-            chunks = db.execute(select(Chunk).where(Chunk.uri == decoded_uri)).scalars().all()
+            # Find chunks by URI (exact match) AND user_id
+            chunks = db.execute(
+                select(Chunk).where(Chunk.uri == decoded_uri, Chunk.user_id == current_user.id)
+            ).scalars().all()
 
             if not chunks:
                 logger.warning(f"No chunks found for URI: {decoded_uri}")
@@ -267,7 +242,11 @@ async def delete_document(document_id: str) -> DeleteResponse:
 
             # Verify deletion worked
             remaining = (
-                db.execute(select(func.count(Chunk.id)).where(Chunk.uri == decoded_uri)).scalar()
+                db.execute(
+                    select(func.count(Chunk.id)).where(
+                        Chunk.uri == decoded_uri, Chunk.user_id == current_user.id
+                    )
+                ).scalar()
                 or 0
             )
 
@@ -293,7 +272,6 @@ async def delete_document(document_id: str) -> DeleteResponse:
                 chunks_deleted=chunk_count,
             )
         except HTTPException:
-            # Re-raise HTTP exceptions as-is
             raise
         except Exception as e:
             db.rollback()

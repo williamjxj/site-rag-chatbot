@@ -94,4 +94,24 @@
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
   }
+
+  .amber-theme {
+    --background: 33 35% 6%;
+    --foreground: 46 89% 96%;
+    --card: 27 40% 10%;
+    --card-foreground: 46 89% 96%;
+    --primary: 38 92% 55%;
+    --primary-foreground: 28 94% 12%;
+    --secondary: 31 32% 18%;
+    --secondary-foreground: 44 90% 92%;
+    --muted: 31 32% 18%;
+    --muted-foreground: 32 35% 70%;
+    --accent: 38 92% 55%;
+    --accent-foreground: 27 100% 9%;
+    --border: 32 32% 18%;
+    --input: 32 32% 18%;
+    --ring: 38 92% 55%;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
 }

@@ -13,7 +13,7 @@ from .retriever import retrieve
 logger = logging.getLogger(__name__)
 
 
-def answer(question: str) -> dict[str, str | list[str]]:
+def answer(question: str, user_id: int | None = None) -> dict[str, str | list[str]]:
     """
     Generate answer to user question using RAG.
 
@@ -54,7 +54,7 @@ def answer(question: str) -> dict[str, str | list[str]]:
 
     # Retrieve relevant chunks
     logger.info(f"Retrieving top-{settings.top_k} chunks from vector database")
-    chunks = retrieve(q_emb, settings.top_k)
+    chunks = retrieve(q_emb, settings.top_k, user_id)
     logger.info(f"Retrieved {len(chunks)} chunks")
 
     if not chunks:

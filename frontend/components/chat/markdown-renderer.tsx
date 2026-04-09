@@ -21,7 +21,7 @@ export function MarkdownRenderer({ content }: { content: string }) {
   
   try {
     return (
-      <div className="markdown-content prose prose-sm max-w-none dark:prose-invert">
+      <div className="markdown-content prose prose-sm max-w-none text-amber-50 prose-headings:text-amber-50 prose-strong:text-amber-50">
         <ReactMarkdown
           rehypePlugins={[rehypeHighlight, rehypeSanitize]}
           components={{
@@ -31,14 +31,14 @@ export function MarkdownRenderer({ content }: { content: string }) {
             const isInline = !className || !match;
             return !isInline ? (
               <code
-                className={`${className} block rounded-md bg-muted p-4 text-sm font-mono overflow-x-auto`}
+                className={`${className} block rounded-xl bg-[#1a0e05] p-4 text-sm font-mono text-amber-50/90 shadow-inner`}
                 {...props}
               >
                 {children}
               </code>
             ) : (
               <code
-                className="rounded bg-muted px-1.5 py-0.5 text-sm font-mono"
+                className="rounded bg-[#1a0e05] px-1.5 py-0.5 text-sm font-mono"
                 {...props}
               >
                 {children}
@@ -48,7 +48,7 @@ export function MarkdownRenderer({ content }: { content: string }) {
           // Style links
           a: (props) => (
             <a
-              className="text-primary underline underline-offset-4 hover:text-primary/80"
+              className="text-amber-200 underline underline-offset-4 hover:text-amber-100"
               target="_blank"
               rel="noopener noreferrer"
               {...props}
@@ -91,4 +91,3 @@ export function MarkdownRenderer({ content }: { content: string }) {
     );
   }
 }
-

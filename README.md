@@ -14,6 +14,7 @@ A RAG (Retrieval Augmented Generation) chatbot application that ingests content 
 
 **Core Implementation**: ✅ Complete  
 **User Stories**: ✅ All 4 implemented (Chat, Ingestion, Admin, Site Improvements)  
+**Multi-tenant Isolation**: ✅ Complete (per-user document storage)
 **Tests**: ⏳ Pending (see [Implementation Summary](./docs/implementation-summary.md))
 
 The system is fully functional and ready for use. See [docs/implementation-summary.md](./docs/implementation-summary.md) for detailed implementation documentation.
@@ -31,7 +32,11 @@ The system is fully functional and ready for use. See [docs/implementation-summa
   - **DeepSeek**: `https://api.deepseek.com/v1` (model: `deepseek-chat`)
   - **Kimi**: `https://api.moonshot.cn/v1` (model: `moonshot-v1-8k`)
   - **MiniMax**: `https://api.minimax.chat/v1` (model: `abab6.5s-chat`)
+- **Multi-Tenant Isolation**: Per-user document storage and retrieval
+  - Each user's documents are isolated - users only see their own content
+  - Admin endpoints filter by authenticated user
 - **Content Ingestion**: Ingest content from static websites (via sitemap) and documents (.md, .pdf, .txt)
+  - **Document Upload**: Upload files directly via admin interface
 - **Heading-Aware Chunking**: Markdown files are chunked by semantic sections, preserving document structure
 - **Vector Search**: Semantic search using PostgreSQL + pgvector
 - **Source Citations**: All answers include source citations
@@ -396,7 +401,9 @@ site-rag-chatbot/
 
 ### Admin
 - `GET /admin/documents` - List ingested documents (with optional source filter)
-- `DELETE /admin/documents/{id}` - Remove a document
+- `POST /admin/upload` - Upload and ingest a document file
+- `DELETE /admin/documents` - Delete all documents for the current user
+- `DELETE /admin/documents/{id}` - Remove a document by URI
 - `GET /admin/config/embedding-provider` - Get current embedding provider configuration
 - `PUT /admin/config/embedding-provider` - Update embedding provider preference
 
@@ -425,7 +432,7 @@ site-rag-chatbot/
 
 1. Open http://localhost:3000/admin (requires login)
 2. **Content Management Tab**:
-   - **Upload Documents**: Upload PDF, Markdown, or text files
+   - **Upload Documents**: Upload PDF, Markdown, or text files via file picker
    - **Manage Documents**: View, filter, and delete documents from the knowledge base
 3. **Settings Tab**:
    - **Embedding Provider**: Select between OpenAI (text-embedding-3-small) or local sentence-transformers
@@ -646,11 +653,16 @@ pnpm run lint
 - Admin page reorganization with shadcn/ui tabs
 - Embedding provider selection (OpenAI or local sentence-transformers)
 
+### Fixes & Improvements
+
+- **Document Upload Fix**: Upload endpoint now properly includes auth token
+- **Multi-Tenant Isolation**: All admin and ingestion endpoints now filter by authenticated user
+- **Bug Fixes**: Fixed missing SessionLocal in list_documents, stray continue in pipeline
+
 ### Pending Work
 
 - Comprehensive test suite (unit, integration, E2E)
 - Performance optimizations (caching, query optimization)
-- File upload handler (multipart/form-data)
 - Additional polish and enhancements
 
 See [Implementation Summary](./docs/implementation-summary.md) for complete details.

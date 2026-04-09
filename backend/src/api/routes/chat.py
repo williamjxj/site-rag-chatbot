@@ -1,29 +1,21 @@
 """Chat API route handler."""
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from ...config import validate_api_keys
+from ...db import User
 from ...rag.chat import answer
 from ..models import ChatRequest, ChatResponse
+from .auth import get_current_user
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
 
 @router.post("", response_model=ChatResponse, status_code=status.HTTP_200_OK)
-async def chat_endpoint(request: ChatRequest) -> ChatResponse:
-    """
-    Handle chat requests and return answers with source citations.
-
-    Args:
-        request: Chat request with user question
-
-    Returns:
-        Chat response with answer and sources
-
-    Raises:
-        HTTPException: If chat processing fails
-    """
-    # Validate question is not empty or whitespace-only
+async def chat_endpoint(
+    request: ChatRequest,
+    current_user: User = Depends(get_current_user),
+) -> ChatResponse:
     if not request.question or not request.question.strip():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -34,7 +26,6 @@ async def chat_endpoint(request: ChatRequest) -> ChatResponse:
             },
         )
 
-    # Validate question length (max 1000 characters)
     if len(request.question) > 1000:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -45,7 +36,6 @@ async def chat_endpoint(request: ChatRequest) -> ChatResponse:
             },
         )
 
-    # Validate API keys are configured
     try:
         validate_api_keys()
     except ValueError as e:
@@ -59,7 +49,7 @@ async def chat_endpoint(request: ChatRequest) -> ChatResponse:
         ) from e
 
     try:
-        result = answer(request.question)
+        result = answer(request.question, current_user.id)
         return ChatResponse(
             answer=result["answer"],
             sources=result["sources"],

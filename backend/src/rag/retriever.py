@@ -11,7 +11,9 @@ from ..db import Chunk, SessionLocal
 logger = logging.getLogger(__name__)
 
 
-def retrieve(query_embedding: list[float], top_k: int | None = None) -> list[Chunk]:
+def retrieve(
+    query_embedding: list[float], top_k: int | None = None, user_id: int | None = None
+) -> list[Chunk]:
     """
     Retrieve top-k most similar chunks using cosine distance.
 
@@ -24,6 +26,7 @@ def retrieve(query_embedding: list[float], top_k: int | None = None) -> list[Chu
     Args:
         query_embedding: Query vector embedding (dimension must match stored embeddings)
         top_k: Number of chunks to retrieve (defaults to settings.top_k)
+        user_id: If provided, only retrieve chunks belonging to this user (multi-tenant isolation)
 
     Returns:
         List of Chunk objects ordered by similarity (only chunks with matching dimensions)
@@ -36,14 +39,17 @@ def retrieve(query_embedding: list[float], top_k: int | None = None) -> list[Chu
 
     try:
         with SessionLocal() as db:
-            # pgvector cosine_distance requires matching dimensions
-            # Chunks with different dimensions will be filtered automatically by the database
-            stmt = (
-                select(Chunk)
-                .where(Chunk.embedding.is_not(None))
-                .order_by(Chunk.embedding.cosine_distance(query_embedding))
-                .limit(top_k)
-            )
+            # Build base query
+            stmt = select(Chunk).where(Chunk.embedding.is_not(None))
+
+            # Filter by user_id for multi-tenant isolation
+            if user_id is not None:
+                logger.debug(f"Filtering retrieval by user_id: {user_id}")
+                stmt = stmt.where(Chunk.user_id == user_id)
+
+            # Add ordering and limit
+            stmt = stmt.order_by(Chunk.embedding.cosine_distance(query_embedding)).limit(top_k)
+
             rows = db.execute(stmt).scalars().all()
 
             # Log if we got fewer results than requested (might indicate dimension mismatch)

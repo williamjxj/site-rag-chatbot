@@ -47,9 +47,15 @@ export async function uploadDocument(file: File): Promise<UploadResponse> {
   formData.append("file", file);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+
   const response = await fetch(`${API_URL}/admin/upload`, {
     method: "POST",
     body: formData,
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
   });
 
   if (!response.ok) {

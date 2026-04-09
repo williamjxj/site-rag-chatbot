@@ -13,12 +13,13 @@ from .sources.file_loader import iter_files, load_file
 from .sources.sitemap_crawler import fetch_page, fetch_sitemap_urls
 
 
-def upsert_chunks(items: list[dict]) -> None:
+def upsert_chunks(items: list[dict], user_id: int | None = None) -> None:
     """
     Upsert chunks into database with embeddings.
 
     Args:
         items: List of chunk dictionaries with required fields
+        user_id: Optional user ID for multi-tenant isolation
     """
     if not items:
         return
@@ -40,6 +41,8 @@ def upsert_chunks(items: list[dict]) -> None:
                 existing.embedding = emb
                 existing.title = it.get("title")
                 existing.heading_path = it.get("heading_path")
+                if user_id:
+                    existing.user_id = user_id
             else:
                 # Insert new chunk
                 db.add(
@@ -52,13 +55,13 @@ def upsert_chunks(items: list[dict]) -> None:
                         text=it["text"],
                         text_hash=it["text_hash"],
                         embedding=emb,
+                        user_id=user_id,
                     )
                 )
         db.commit()
 
 
-def ingest_website() -> None:
-    """Ingest content from website via sitemap."""
+def ingest_website(user_id: int | None = None) -> None:
     if not settings.sitemap_url:
         return
 
@@ -81,11 +84,15 @@ def ingest_website() -> None:
                         "heading_path": None,
                         "text": chunk_text_content,
                         "text_hash": h,
+                        "user_id": user_id,
                     }
                 )
         except Exception as e:
             print(f"Error processing {url}: {e}")
-            continue
+
+    if items:
+        items = deduplicate_chunks(items)
+        upsert_chunks(items, user_id)
 
     if items:
         # Deduplicate before upserting
@@ -94,12 +101,13 @@ def ingest_website() -> None:
         print(f"Ingested {len(items)} chunks from website")
 
 
-def ingest_single_file(file_path: Path) -> int:
+def ingest_single_file(file_path: Path, user_id: int | None = None) -> int:
     """
     Ingest a single file and return the number of chunks created.
 
     Args:
         file_path: Path to the file to ingest
+        user_id: Optional user ID for multi-tenant isolation
 
     Returns:
         Number of chunks ingested
@@ -135,6 +143,7 @@ def ingest_single_file(file_path: Path) -> int:
                         "heading_path": heading_path if heading_path else None,
                         "text": chunk_text_content,
                         "text_hash": h,
+                        "user_id": user_id,
                     }
                 )
         else:
@@ -150,6 +159,7 @@ def ingest_single_file(file_path: Path) -> int:
                         "heading_path": None,
                         "text": chunk_text_content,
                         "text_hash": h,
+                        "user_id": user_id,
                     }
                 )
     except Exception as e:
@@ -158,13 +168,12 @@ def ingest_single_file(file_path: Path) -> int:
     if items:
         # Deduplicate before upserting
         items = deduplicate_chunks(items)
-        upsert_chunks(items)
+        upsert_chunks(items, user_id)
         return len(items)
     return 0
 
 
-def ingest_docs() -> None:
-    """Ingest content from local documents with heading-aware chunking for markdown."""
+def ingest_docs(user_id: int | None = None) -> None:
     docs_path = Path(settings.docs_dir)
     if not docs_path.exists():
         print(f"Docs directory not found: {docs_path}")
@@ -181,15 +190,12 @@ def ingest_docs() -> None:
             if not normalized_text:
                 continue
 
-            # Check if this is a markdown file with headings
-            # Re-extract headings from normalized text to ensure positions match
             from .sources.md_loader import extract_headings
 
             is_markdown = p.suffix.lower() in [".md", ".mdx"]
             headings = extract_headings(normalized_text) if is_markdown else None
 
             if is_markdown and headings:
-                # Use heading-aware chunking for markdown
                 chunked = chunk_markdown_by_headings(normalized_text, headings)
                 for chunk_text_content, heading_path in chunked:
                     h = hash_text(uri + "\n" + str(heading_path) + "\n" + chunk_text_content)
@@ -202,10 +208,10 @@ def ingest_docs() -> None:
                             "heading_path": heading_path if heading_path else None,
                             "text": chunk_text_content,
                             "text_hash": h,
+                            "user_id": user_id,
                         }
                     )
             else:
-                # Use regular chunking for other file types
                 for chunk_text_content in chunk_text(normalized_text):
                     h = hash_text(uri + "\n" + chunk_text_content)
                     items.append(
@@ -217,25 +223,25 @@ def ingest_docs() -> None:
                             "heading_path": None,
                             "text": chunk_text_content,
                             "text_hash": h,
+                            "user_id": user_id,
                         }
                     )
         except Exception as e:
             print(f"Error processing {p}: {e}")
-            continue
 
     if items:
-        # Deduplicate before upserting
         items = deduplicate_chunks(items)
-        upsert_chunks(items)
+        upsert_chunks(items, user_id)
         print(f"Ingested {len(items)} chunks from documents")
 
 
-def ingest_all(source: str = "all") -> dict[str, int]:
+def ingest_all(source: str = "all", user_id: int | None = None) -> dict[str, int]:
     """
     Ingest all content sources.
 
     Args:
         source: Which source to ingest ('web', 'file', or 'all')
+        user_id: Optional user ID for multi-tenant isolation
 
     Returns:
         Dictionary with ingestion statistics
@@ -243,21 +249,31 @@ def ingest_all(source: str = "all") -> dict[str, int]:
     stats = {"web_chunks": 0, "file_chunks": 0}
 
     if source in ["web", "all"]:
-        ingest_website()
-        # Count web chunks
+        ingest_website(user_id)
+        # Count web chunks for this user
         with SessionLocal() as db:
             from sqlalchemy import func, select
 
-            result = db.execute(select(func.count(Chunk.id)).where(Chunk.source == "web")).scalar()
+            if user_id:
+                result = db.execute(
+                    select(func.count(Chunk.id)).where(Chunk.source == "web", Chunk.user_id == user_id)
+                ).scalar()
+            else:
+                result = db.execute(select(func.count(Chunk.id)).where(Chunk.source == "web")).scalar()
             stats["web_chunks"] = result or 0
 
     if source in ["file", "all"]:
-        ingest_docs()
-        # Count file chunks
+        ingest_docs(user_id)
+        # Count file chunks for this user
         with SessionLocal() as db:
             from sqlalchemy import func, select
 
-            result = db.execute(select(func.count(Chunk.id)).where(Chunk.source == "file")).scalar()
+            if user_id:
+                result = db.execute(
+                    select(func.count(Chunk.id)).where(Chunk.source == "file", Chunk.user_id == user_id)
+                ).scalar()
+            else:
+                result = db.execute(select(func.count(Chunk.id)).where(Chunk.source == "file")).scalar()
             stats["file_chunks"] = result or 0
 
     return stats
