@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings, validate_api_keys
 from .db import init_db
-from .api.routes import chat, ingest, admin
+from .api.routes import chat, ingest, admin, auth
 
 # Configure logging
 logging.basicConfig(
@@ -87,3 +87,4 @@ async def health():
 app.include_router(chat.router)
 app.include_router(ingest.router)
 app.include_router(admin.router)
+app.include_router(auth.router)
