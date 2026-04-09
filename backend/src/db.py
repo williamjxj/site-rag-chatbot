@@ -1,12 +1,23 @@
 """Database models and connection."""
 
 import logging
-from datetime import datetime
-from sqlalchemy import Column, String, Text, DateTime, JSON, create_engine, text
-from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.sql import func
+
 from pgvector.sqlalchemy import Vector
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    create_engine,
+    text,
+)
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.sql import func
 
 from .config import settings
 
@@ -16,6 +27,23 @@ logger = logging.getLogger(__name__)
 engine = create_engine(settings.database_url, future=True)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
 Base = declarative_base()
+
+
+class User(Base):
+    """User model for authentication."""
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False)
+    username = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    full_name = Column(String, nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    def __repr__(self):
+        return f"<User(id={self.id}, username={self.username})>"
 
 
 class Chunk(Base):
@@ -30,6 +58,7 @@ class Chunk(Base):
     heading_path = Column(JSON, nullable=True)
     text = Column(Text, nullable=False)
     text_hash = Column(String(64), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     embedding = Column(Vector, nullable=True)  # Variable dimensions: 1536 (OpenAI) or 384 (free model)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -42,7 +71,7 @@ class Chunk(Base):
 def init_db() -> None:
     """
     Initialize database schema and pgvector extension.
-    
+
     Raises:
         ValueError: If database connection fails
     """
@@ -59,14 +88,14 @@ def init_db() -> None:
         )
         logger.error(error_msg)
         raise ValueError(error_msg) from e
-    
+
     # Create pgvector extension FIRST (before creating tables with VECTOR type)
     with engine.begin() as conn:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
-    
+
     # Now create tables (which use the VECTOR type)
     Base.metadata.create_all(bind=engine)
-    
+
     # Create indexes for performance
     with engine.begin() as conn:
         conn.execute(
@@ -75,6 +104,7 @@ def init_db() -> None:
                 CREATE INDEX IF NOT EXISTS idx_chunks_source ON chunks(source);
                 CREATE INDEX IF NOT EXISTS idx_chunks_uri ON chunks(uri);
                 CREATE INDEX IF NOT EXISTS idx_chunks_text_hash ON chunks(text_hash);
+                CREATE INDEX IF NOT EXISTS idx_chunks_user_id ON chunks(user_id);
                 """
             )
         )
@@ -83,7 +113,7 @@ def init_db() -> None:
             conn.execute(
                 text(
                     """
-                    CREATE INDEX IF NOT EXISTS idx_chunks_embedding 
+                    CREATE INDEX IF NOT EXISTS idx_chunks_embedding
                     ON chunks USING ivfflat (embedding vector_cosine_ops);
                     """
                 )
@@ -91,20 +121,20 @@ def init_db() -> None:
         except Exception:
             # Index creation might fail if no embeddings exist yet
             pass
-        
+
         # Migrate existing Vector(1536) column to flexible Vector type if needed
         try:
             # Check if column exists and has size constraint
             result = conn.execute(
                 text(
                     """
-                    SELECT data_type, udt_name 
-                    FROM information_schema.columns 
+                    SELECT data_type, udt_name
+                    FROM information_schema.columns
                     WHERE table_name = 'chunks' AND column_name = 'embedding';
                     """
                 )
             ).fetchone()
-            
+
             if result and result[1] == 'vector':
                 # Column exists, try to alter if it has size constraint
                 # Note: PostgreSQL pgvector doesn't enforce size in type, but SQLAlchemy might
