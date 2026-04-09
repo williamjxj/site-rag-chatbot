@@ -2,13 +2,13 @@ import path from "node:path";
 import { mkdir } from "node:fs/promises";
 import { test, type Page } from "@playwright/test";
 
-const SCREENSHOT_DIR = path.resolve(process.cwd(), "public", "screenshots");
+const SCREENSHOT_DIR = path.resolve(process.cwd(), "screenshots");
 
 const demoUser = {
   id: 42,
-  email: "amber.ops@acme.example",
-  username: "amber.ops",
-  full_name: "Amber Ops",
+  email: "tester@acme.example",
+  username: "tester",
+  full_name: "William One",
   is_active: true,
   created_at: "2024-01-02T12:00:00Z",
 };
@@ -134,7 +134,7 @@ test("home page screenshot", async ({ page }) => {
   await page.goto("/");
   await page.waitForSelector("text=Chatbot console");
   const input = page.getByPlaceholder(/Ask anything/);
-  await input.fill("Summarize onboarding KPIs for Monday's business review");
+  await input.fill("what docs are you using");
   await Promise.all([
     page.waitForResponse("**/chat"),
     page.getByRole("button", { name: "Send" }).click(),

@@ -46,13 +46,13 @@ The system is fully functional and ready for use. See [docs/implementation-summa
 
 ### Screenshots
 
-<img src="./screenshots/c1.png" style="width: 85%; border: 1px solid #ddd; border-radius: 4px;" alt="Chat Interface" />
+Screenshots are generated automatically via Playwright (`pnpm snapshots` from `frontend/`) with mocked data so the UI stays consistent. The latest captures live under `frontend/screenshots/`:
 
-<img src="./screenshots/c2.png" style="width: 85%; border: 1px solid #ddd; border-radius: 4px;" alt="Chat with Markdown Rendering" />
+![Home chat console](frontend/screenshots/home.png)
 
-<img src="./screenshots/a2.png" style="width: 85%; border: 1px solid #ddd; border-radius: 4px;" alt="Admin Interface - Settings" />
+![Admin control room](frontend/screenshots/admin.png)
 
-<img src="./screenshots/a1.png" style="width: 85%; border: 1px solid #ddd; border-radius: 4px;" alt="Admin Interface - Content Management" />
+![Subscriber profile](frontend/screenshots/profile.png)
 
 
 ## Tech Stack
@@ -138,6 +138,8 @@ The system is fully functional and ready for use. See [docs/implementation-summa
    ```
 
 7. **Open the app**: http://localhost:3000
+
+> **Demo credentials for docs:** screenshots and automated tests assume a business subscriber account `tester` with password `William1!`. Create that user via the auth API or seed it in your database if you want to mirror the documented flows.
 
 ## Architecture
 
