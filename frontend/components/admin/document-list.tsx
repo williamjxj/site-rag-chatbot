@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useImperativeHandle, forwardRef } from "react";
+import { useState, useEffect, useImperativeHandle, forwardRef, useCallback } from "react";
 import { listDocuments, deleteDocument } from "@/lib/api/admin";
 import type { Document } from "@/lib/utils/types";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ export const DocumentList = forwardRef<DocumentListRef>((props, ref) => {
   const [filter, setFilter] = useState<"web" | "file" | "all">("all");
   const [deleting, setDeleting] = useState<string | null>(null);
 
-  const loadDocuments = async () => {
+  const loadDocuments = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -29,11 +29,11 @@ export const DocumentList = forwardRef<DocumentListRef>((props, ref) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter]);
 
   useEffect(() => {
     loadDocuments();
-  }, [filter]);
+  }, [loadDocuments]);
 
   useImperativeHandle(ref, () => ({
     refresh: loadDocuments,

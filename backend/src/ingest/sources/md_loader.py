@@ -1,8 +1,8 @@
 """Markdown and text file loader with heading extraction."""
 
 import re
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 
 def extract_headings(text: str) -> list[tuple[int, str, int]]:
@@ -41,8 +41,6 @@ def extract_headings(text: str) -> list[tuple[int, str, int]]:
         pos += len(line) + 1  # +1 for newline
 
     return headings
-
-
 
 
 def load_md(path: Path) -> dict:

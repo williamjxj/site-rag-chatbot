@@ -27,4 +27,3 @@ def load_doc(path: Path) -> dict[str, str]:
         "Please convert to .docx format or install textract with system dependencies. "
         "Alternatively, use .docx files which are fully supported."
     )
-

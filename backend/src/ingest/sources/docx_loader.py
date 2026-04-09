@@ -1,6 +1,7 @@
 """Word document loader (.docx)."""
 
 from pathlib import Path
+
 from docx import Document
 
 
@@ -16,13 +17,13 @@ def load_docx(path: Path) -> dict[str, str]:
     """
     doc = Document(str(path))
     parts = []
-    
+
     # Extract text from paragraphs
     for paragraph in doc.paragraphs:
         text = paragraph.text.strip()
         if text:
             parts.append(text)
-    
+
     # Extract text from tables
     for table in doc.tables:
         for row in table.rows:
@@ -33,7 +34,6 @@ def load_docx(path: Path) -> dict[str, str]:
                     row_text.append(cell_text)
             if row_text:
                 parts.append(" | ".join(row_text))
-    
+
     text = "\n".join(parts).strip()
     return {"uri": str(path), "title": path.stem, "text": text}
-

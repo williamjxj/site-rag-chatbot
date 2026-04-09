@@ -21,8 +21,12 @@ class ChatResponse(BaseModel):
 class IngestRequest(BaseModel):
     """Request model for ingest endpoint."""
 
-    source: str = Field(default="all", enum=["web", "file", "all"], description="Which source to ingest")
-    force: bool = Field(default=False, description="Force re-ingestion even if content hasn't changed")
+    source: str = Field(
+        default="all", enum=["web", "file", "all"], description="Which source to ingest"
+    )
+    force: bool = Field(
+        default=False, description="Force re-ingestion even if content hasn't changed"
+    )
 
 
 class IngestResponse(BaseModel):
@@ -40,8 +44,12 @@ class Document(BaseModel):
     source: str = Field(..., enum=["web", "file"], description="Source type")
     title: str | None = Field(None, description="Document title")
     chunk_count: int = Field(..., ge=0, description="Number of chunks from this document")
-    first_ingested_at: datetime | None = Field(None, description="When this document was first ingested")
-    last_updated_at: datetime | None = Field(None, description="When this document was last updated")
+    first_ingested_at: datetime | None = Field(
+        None, description="When this document was first ingested"
+    )
+    last_updated_at: datetime | None = Field(
+        None, description="When this document was last updated"
+    )
 
 
 class DocumentListResponse(BaseModel):
@@ -89,12 +97,24 @@ class ProviderOption(BaseModel):
 class ConfigResponse(BaseModel):
     """Response model for embedding provider configuration endpoints."""
 
-    embedding_provider: str = Field(..., enum=["openai", "local", ""], description="Current embedding provider. Empty string means auto-detect.")
-    embedding_model: str | None = Field(None, description="Current embedding model name (derived from provider)")
-    available_providers: list[ProviderOption] = Field(..., description="List of available embedding providers with metadata")
+    embedding_provider: str = Field(
+        ...,
+        enum=["openai", "local", ""],
+        description="Current embedding provider. Empty string means auto-detect.",
+    )
+    embedding_model: str | None = Field(
+        None, description="Current embedding model name (derived from provider)"
+    )
+    available_providers: list[ProviderOption] = Field(
+        ..., description="List of available embedding providers with metadata"
+    )
 
 
 class UpdateConfigRequest(BaseModel):
     """Request model for updating embedding provider configuration."""
 
-    embedding_provider: str = Field(..., enum=["openai", "local"], description="Embedding provider to use. Must be either 'openai' or 'local'.")
+    embedding_provider: str = Field(
+        ...,
+        enum=["openai", "local"],
+        description="Embedding provider to use. Must be either 'openai' or 'local'.",
+    )

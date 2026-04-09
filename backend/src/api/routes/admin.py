@@ -2,22 +2,21 @@
 
 import shutil
 from pathlib import Path
-from sqlalchemy import select, func, and_, text
-from fastapi import APIRouter, HTTPException, status, Query, UploadFile, File
-from fastapi.responses import JSONResponse
 
-from ...db import SessionLocal, Chunk
+from fastapi import APIRouter, File, HTTPException, Query, UploadFile, status
+from sqlalchemy import func, select, text
+
 from ...config import settings, update_embedding_provider
+from ...db import Chunk, SessionLocal
 from ...ingest.pipeline import ingest_single_file
 from ..models import (
+    ConfigResponse,
+    DeleteResponse,
     Document,
     DocumentListResponse,
-    DeleteResponse,
-    ErrorResponse,
-    UploadResponse,
-    ConfigResponse,
-    UpdateConfigRequest,
     ProviderOption,
+    UpdateConfigRequest,
+    UploadResponse,
 )
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
@@ -55,9 +54,7 @@ async def list_documents(
             query = query.where(Chunk.source == source)
 
         # Get total count
-        count_query = select(func.count()).select_from(
-            query.subquery()
-        )
+        count_query = select(func.count()).select_from(query.subquery())
         total = db.execute(count_query).scalar() or 0
 
         # Apply pagination
@@ -90,24 +87,34 @@ async def list_documents(
 async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
     """
     Upload a document file and immediately ingest it.
-    
+
     Args:
         file: Uploaded file (PDF, MD, MDX, TXT, DOCX, XLSX, XLS, PPTX, HTML, CSV)
-    
+
     Returns:
         Upload response with status and ingestion results
-    
+
     Raises:
         HTTPException: If upload or ingestion fails
     """
     # Validate file type
     allowed_extensions = {
-        ".pdf", ".md", ".mdx", ".txt",
-        ".doc", ".docx", ".xlsx", ".xls", ".ppt", ".pptx",
-        ".html", ".htm", ".csv"
+        ".pdf",
+        ".md",
+        ".mdx",
+        ".txt",
+        ".doc",
+        ".docx",
+        ".xlsx",
+        ".xls",
+        ".ppt",
+        ".pptx",
+        ".html",
+        ".htm",
+        ".csv",
     }
     file_ext = Path(file.filename).suffix.lower() if file.filename else ""
-    
+
     if file_ext not in allowed_extensions:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -117,11 +124,11 @@ async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
                 "details": None,
             },
         )
-    
+
     # Ensure uploads directory exists (resolve to absolute path)
     docs_path = Path(settings.docs_dir).resolve()
     docs_path.mkdir(parents=True, exist_ok=True)
-    
+
     # Save file (use filename from upload, sanitize if needed)
     safe_filename = file.filename or "uploaded_file"
     # Prevent directory traversal
@@ -140,13 +147,13 @@ async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
                 "details": None,
             },
         ) from e
-    
+
     # Ingest the uploaded file
     try:
         chunks_ingested = ingest_single_file(file_path)
         return UploadResponse(
             ok=True,
-            message=f"File uploaded and ingested successfully",
+            message="File uploaded and ingested successfully",
             filename=file.filename,
             chunks_ingested=chunks_ingested,
         )
@@ -170,26 +177,27 @@ async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
 async def delete_all_documents() -> DeleteResponse:
     """
     Delete all documents and chunks from the knowledge base.
-    
+
     Returns:
         Delete response with number of chunks deleted
-    
+
     Raises:
         HTTPException: If deletion fails
     """
     with SessionLocal() as db:
         try:
             # Get count before deletion
-            from sqlalchemy import select, func
+            from sqlalchemy import func, select
+
             chunk_count = db.execute(select(func.count(Chunk.id))).scalar() or 0
-            
+
             # Delete all chunks
             db.execute(text("DELETE FROM chunks;"))
             db.commit()
-            
+
             return DeleteResponse(
                 ok=True,
-                message=f"All documents deleted successfully",
+                message="All documents deleted successfully",
                 chunks_deleted=chunk_count,
             )
         except Exception as e:
@@ -204,7 +212,9 @@ async def delete_all_documents() -> DeleteResponse:
             ) from e
 
 
-@router.delete("/documents/{document_id:path}", response_model=DeleteResponse, status_code=status.HTTP_200_OK)
+@router.delete(
+    "/documents/{document_id:path}", response_model=DeleteResponse, status_code=status.HTTP_200_OK
+)
 async def delete_document(document_id: str) -> DeleteResponse:
     """
     Delete a document and all its chunks from the knowledge base (including pgvector embeddings).
@@ -219,20 +229,20 @@ async def delete_document(document_id: str) -> DeleteResponse:
         HTTPException: If document not found or deletion fails
     """
     import logging
+
     logger = logging.getLogger(__name__)
-    
+
     # URL decode the document_id in case it was encoded
     from urllib.parse import unquote
+
     decoded_uri = unquote(document_id)
-    
+
     logger.info(f"Deleting document with URI: {decoded_uri}")
-    
+
     with SessionLocal() as db:
         try:
             # Find chunks by URI (exact match)
-            chunks = db.execute(
-                select(Chunk).where(Chunk.uri == decoded_uri)
-            ).scalars().all()
+            chunks = db.execute(select(Chunk).where(Chunk.uri == decoded_uri)).scalars().all()
 
             if not chunks:
                 logger.warning(f"No chunks found for URI: {decoded_uri}")
@@ -247,21 +257,24 @@ async def delete_document(document_id: str) -> DeleteResponse:
 
             chunk_count = len(chunks)
             logger.info(f"Found {chunk_count} chunks to delete for URI: {decoded_uri}")
-            
+
             # Delete all chunks (this also deletes the embeddings from pgvector)
             for chunk in chunks:
                 db.delete(chunk)
-            
+
             # Commit the transaction
             db.commit()
-            
+
             # Verify deletion worked
-            remaining = db.execute(
-                select(func.count(Chunk.id)).where(Chunk.uri == decoded_uri)
-            ).scalar() or 0
-            
+            remaining = (
+                db.execute(select(func.count(Chunk.id)).where(Chunk.uri == decoded_uri)).scalar()
+                or 0
+            )
+
             if remaining > 0:
-                logger.error(f"Deletion verification failed: {remaining} chunks still exist for URI: {decoded_uri}")
+                logger.error(
+                    f"Deletion verification failed: {remaining} chunks still exist for URI: {decoded_uri}"
+                )
                 db.rollback()
                 raise HTTPException(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -271,7 +284,7 @@ async def delete_document(document_id: str) -> DeleteResponse:
                         "details": None,
                     },
                 )
-            
+
             logger.info(f"Successfully deleted {chunk_count} chunks for URI: {decoded_uri}")
 
             return DeleteResponse(
@@ -295,21 +308,19 @@ async def delete_document(document_id: str) -> DeleteResponse:
             ) from e
 
 
-@router.get("/config/embedding-provider", response_model=ConfigResponse, status_code=status.HTTP_200_OK)
+@router.get(
+    "/config/embedding-provider", response_model=ConfigResponse, status_code=status.HTTP_200_OK
+)
 async def get_embedding_provider() -> ConfigResponse:
     """
     Get current embedding provider configuration.
-    
+
     Returns:
         ConfigResponse with current provider, model, and available options
     """
     provider = settings.embedding_provider or ""
-    model = (
-        settings.embedding_model
-        if provider == "openai"
-        else settings.free_embedding_model
-    )
-    
+    model = settings.embedding_model if provider == "openai" else settings.free_embedding_model
+
     return ConfigResponse(
         embedding_provider=provider,
         embedding_model=model,
@@ -328,17 +339,19 @@ async def get_embedding_provider() -> ConfigResponse:
     )
 
 
-@router.put("/config/embedding-provider", response_model=ConfigResponse, status_code=status.HTTP_200_OK)
+@router.put(
+    "/config/embedding-provider", response_model=ConfigResponse, status_code=status.HTTP_200_OK
+)
 async def update_embedding_provider_config(request: UpdateConfigRequest) -> ConfigResponse:
     """
     Update embedding provider configuration.
-    
+
     Args:
         request: UpdateConfigRequest with new provider value
-    
+
     Returns:
         ConfigResponse with updated configuration
-    
+
     Raises:
         HTTPException: If provider value is invalid or update fails
     """
@@ -354,7 +367,7 @@ async def update_embedding_provider_config(request: UpdateConfigRequest) -> Conf
                 "details": None,
             },
         ) from e
-    except IOError as e:
+    except OSError as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={

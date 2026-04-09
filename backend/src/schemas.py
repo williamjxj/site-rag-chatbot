@@ -1,13 +1,14 @@
 """Pydantic schemas for authentication."""
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
+
 from datetime import datetime
-from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class UserBase(BaseModel):
     email: EmailStr
     username: str = Field(..., min_length=3, max_length=50, pattern="^[a-zA-Z0-9_-]+$")
-    full_name: Optional[str] = Field(None, max_length=100)
+    full_name: str | None = Field(None, max_length=100)
 
 
 class UserCreate(UserBase):
@@ -18,7 +19,7 @@ class UserResponse(UserBase):
     id: int
     is_active: bool
     created_at: datetime
-    updated_at: Optional[datetime] = None
+    updated_at: datetime | None = None
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -29,7 +30,7 @@ class UserRegistrationResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     detail: str
-    error_code: Optional[str] = None
+    error_code: str | None = None
 
 
 class LoginRequest(BaseModel):
@@ -44,6 +45,6 @@ class LoginResponse(BaseModel):
 
 
 class UserProfileUpdate(BaseModel):
-    email: Optional[EmailStr] = None
-    full_name: Optional[str] = Field(default=None, max_length=100)
+    email: EmailStr | None = None
+    full_name: str | None = Field(default=None, max_length=100)
     model_config = ConfigDict(extra="forbid")

@@ -2,9 +2,9 @@
 
 from fastapi import APIRouter, HTTPException, status
 
-from ...rag.chat import answer
 from ...config import validate_api_keys
-from ..models import ChatRequest, ChatResponse, ErrorResponse
+from ...rag.chat import answer
+from ..models import ChatRequest, ChatResponse
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 

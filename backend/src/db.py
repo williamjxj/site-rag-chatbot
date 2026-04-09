@@ -31,6 +31,7 @@ Base = declarative_base()
 
 class User(Base):
     """User model for authentication."""
+
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -59,13 +60,24 @@ class Chunk(Base):
     text = Column(Text, nullable=False)
     text_hash = Column(String(64), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
-    embedding = Column(Vector, nullable=True)  # Variable dimensions: 1536 (OpenAI) or 384 (free model)
+    embedding = Column(
+        Vector, nullable=True
+    )  # Variable dimensions: 1536 (OpenAI) or 384 (free model)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     def __repr__(self) -> str:
         """String representation."""
         return f"<Chunk(id={self.id[:8]}..., uri={self.uri}, source={self.source})>"
+
+
+def get_db():
+    """Get database session for dependency injection."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 def init_db() -> None:
@@ -135,7 +147,7 @@ def init_db() -> None:
                 )
             ).fetchone()
 
-            if result and result[1] == 'vector':
+            if result and result[1] == "vector":
                 # Column exists, try to alter if it has size constraint
                 # Note: PostgreSQL pgvector doesn't enforce size in type, but SQLAlchemy might
                 # This is a no-op if already flexible, safe to run

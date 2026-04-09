@@ -1,7 +1,7 @@
 """Text chunking logic."""
 
-import re
 import hashlib
+import re
 
 
 def chunk_text(text: str, max_chars: int = 1800, overlap: int = 200) -> list[str]:
@@ -64,7 +64,7 @@ def chunk_markdown_by_headings(
         while heading_stack and heading_stack[-1][0] >= level:
             heading_stack.pop()
         heading_stack.append((level, heading_text))
-        
+
         # Build heading path from stack
         current_heading_path = [h for _, h in heading_stack]
 

@@ -27,4 +27,3 @@ def load_ppt(path: Path) -> dict[str, str]:
         "Please convert to .pptx format or install textract with system dependencies. "
         "Alternatively, use .pptx files which are fully supported."
     )
-

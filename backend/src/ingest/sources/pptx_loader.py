@@ -1,6 +1,7 @@
 """PowerPoint document loader (.pptx)."""
 
 from pathlib import Path
+
 from pptx import Presentation
 
 
@@ -16,10 +17,10 @@ def load_pptx(path: Path) -> dict[str, str]:
     """
     prs = Presentation(str(path))
     parts = []
-    
+
     for slide_num, slide in enumerate(prs.slides, 1):
         parts.append(f"Slide {slide_num}")
-        
+
         # Extract text from shapes
         for shape in slide.shapes:
             if hasattr(shape, "text") and shape.text.strip():
@@ -29,9 +30,8 @@ def load_pptx(path: Path) -> dict[str, str]:
                     parts.append(f"  [{shape.shape_type}]: {text}")
                 else:
                     parts.append(f"  {text}")
-        
+
         parts.append("")  # Empty line between slides
-    
+
     text = "\n".join(parts).strip()
     return {"uri": str(path), "title": path.stem, "text": text}
-

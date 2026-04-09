@@ -1,6 +1,7 @@
 """PDF document loader."""
 
 from pathlib import Path
+
 from pypdf import PdfReader
 
 

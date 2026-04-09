@@ -3,7 +3,7 @@
 from fastapi import APIRouter, HTTPException, status
 
 from ...ingest.pipeline import ingest_all
-from ..models import IngestRequest, IngestResponse, ErrorResponse
+from ..models import IngestRequest, IngestResponse
 
 router = APIRouter(prefix="/ingest", tags=["Ingestion"])
 

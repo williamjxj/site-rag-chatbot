@@ -4,12 +4,12 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, status
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
+from .api.routes import admin, auth, chat, ingest
 from .config import settings, validate_api_keys
 from .db import init_db
-from .api.routes import chat, ingest, admin, auth
 
 # Configure logging
 logging.basicConfig(
@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):
         logger.error(f"Configuration validation failed: {e}")
         # Don't raise here - let the app start but log the error
         # API key validation will happen on first request
-    
+
     logger.info("Initializing database...")
     init_db()
     logger.info("Database initialized")

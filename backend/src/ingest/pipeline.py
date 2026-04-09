@@ -3,14 +3,14 @@
 import uuid
 from pathlib import Path
 
-from ..db import SessionLocal, Chunk
 from ..config import settings
-from .chunking import chunk_text, chunk_markdown_by_headings, hash_text
-from .normalize import normalize_text
-from .dedupe import deduplicate_chunks
-from .sources.sitemap_crawler import fetch_sitemap_urls, fetch_page
-from .sources.file_loader import iter_files, load_file
+from ..db import Chunk, SessionLocal
 from ..rag.embedder import embed_texts
+from .chunking import chunk_markdown_by_headings, chunk_text, hash_text
+from .dedupe import deduplicate_chunks
+from .normalize import normalize_text
+from .sources.file_loader import iter_files, load_file
+from .sources.sitemap_crawler import fetch_page, fetch_sitemap_urls
 
 
 def upsert_chunks(items: list[dict]) -> None:
@@ -97,10 +97,10 @@ def ingest_website() -> None:
 def ingest_single_file(file_path: Path) -> int:
     """
     Ingest a single file and return the number of chunks created.
-    
+
     Args:
         file_path: Path to the file to ingest
-    
+
     Returns:
         Number of chunks ingested
     """
@@ -109,7 +109,7 @@ def ingest_single_file(file_path: Path) -> int:
         loaded = load_file(file_path)
         if not loaded or not loaded["text"].strip():
             return 0
-        
+
         uri = loaded.get("uri") or loaded.get("path") or str(file_path)
         normalized_text = normalize_text(loaded["text"])
         if not normalized_text:
@@ -246,20 +246,18 @@ def ingest_all(source: str = "all") -> dict[str, int]:
         ingest_website()
         # Count web chunks
         with SessionLocal() as db:
-            from sqlalchemy import select, func
-            result = db.execute(
-                select(func.count(Chunk.id)).where(Chunk.source == "web")
-            ).scalar()
+            from sqlalchemy import func, select
+
+            result = db.execute(select(func.count(Chunk.id)).where(Chunk.source == "web")).scalar()
             stats["web_chunks"] = result or 0
 
     if source in ["file", "all"]:
         ingest_docs()
         # Count file chunks
         with SessionLocal() as db:
-            from sqlalchemy import select, func
-            result = db.execute(
-                select(func.count(Chunk.id)).where(Chunk.source == "file")
-            ).scalar()
+            from sqlalchemy import func, select
+
+            result = db.execute(select(func.count(Chunk.id)).where(Chunk.source == "file")).scalar()
             stats["file_chunks"] = result or 0
 
     return stats

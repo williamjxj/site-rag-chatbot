@@ -3,7 +3,7 @@
 import tempfile
 from pathlib import Path
 
-from src.ingest.sources.md_loader import load_md, extract_headings
+from src.ingest.sources.md_loader import extract_headings, load_md
 
 
 def test_extract_headings_atx_style():
@@ -135,4 +135,3 @@ def test_load_md_last_modified():
         assert result["last_modified"] is not None
     finally:
         temp_path.unlink()
-

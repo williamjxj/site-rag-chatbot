@@ -1,13 +1,14 @@
 """Chat response generation using RAG and Deepseek API."""
 
 import logging
+
 import requests
-from requests.exceptions import Timeout, RequestException
+from requests.exceptions import RequestException, Timeout
 
 from ..config import settings
 from .embedder import embed_texts
-from .retriever import retrieve
 from .prompt import SYSTEM_PROMPT, build_prompt
+from .retriever import retrieve
 
 logger = logging.getLogger(__name__)
 
@@ -112,9 +113,7 @@ def answer(question: str) -> dict[str, str | list[str]]:
         # Handle rate limit errors (429)
         if response.status_code == 429:
             logger.warning("Rate limit exceeded for chat LLM API")
-            raise ValueError(
-                "API rate limit exceeded. Please try again later."
-            )
+            raise ValueError("API rate limit exceeded. Please try again later.")
 
         # Handle other HTTP errors
         response.raise_for_status()
@@ -130,24 +129,16 @@ def answer(question: str) -> dict[str, str | list[str]]:
         answer_text = result["choices"][0]["message"].get("content")
         if not answer_text:
             logger.error("Empty content in chat LLM response")
-            raise ValueError(
-                "Received an empty response from the chat service. Please try again."
-            )
+            raise ValueError("Received an empty response from the chat service. Please try again.")
 
     except Timeout:
         logger.error("Timeout calling chat LLM API")
-        raise ValueError(
-            "Request timed out while calling the chat service. Please try again."
-        )
+        raise ValueError("Request timed out while calling the chat service. Please try again.")
     except requests.exceptions.HTTPError as e:
         logger.error(f"HTTP error calling chat LLM API: {e}")
         if e.response and e.response.status_code == 429:
-            raise ValueError(
-                "API rate limit exceeded. Please try again later."
-            )
-        raise ValueError(
-            f"Error calling chat service: {str(e)}. Please try again."
-        )
+            raise ValueError("API rate limit exceeded. Please try again later.")
+        raise ValueError(f"Error calling chat service: {str(e)}. Please try again.")
     except RequestException as e:
         logger.error(f"Network error calling chat LLM API: {e}")
         raise ValueError(
@@ -155,13 +146,13 @@ def answer(question: str) -> dict[str, str | list[str]]:
         )
     except (KeyError, IndexError, TypeError) as e:
         logger.error(f"Malformed response from chat LLM API: {e}")
-        raise ValueError(
-            "Received a malformed response from the chat service. Please try again."
-        )
+        raise ValueError("Received a malformed response from the chat service. Please try again.")
 
     # Deduplicate sources
     unique_sources = list(dict.fromkeys(sources))
-    logger.info(f"RAG pipeline completed successfully. Answer generated with {len(unique_sources)} unique sources")
+    logger.info(
+        f"RAG pipeline completed successfully. Answer generated with {len(unique_sources)} unique sources"
+    )
 
     return {
         "answer": answer_text,

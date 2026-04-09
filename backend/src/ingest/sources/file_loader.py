@@ -1,15 +1,16 @@
 """File loading dispatcher."""
 
 from pathlib import Path
+
+from .csv_loader import load_csv
+from .doc_loader import load_doc
+from .docx_loader import load_docx
+from .excel_loader import load_excel
+from .html_loader import load_html
 from .md_loader import load_md
 from .pdf_loader import load_pdf
-from .docx_loader import load_docx
-from .doc_loader import load_doc
-from .excel_loader import load_excel
-from .pptx_loader import load_pptx
 from .ppt_loader import load_ppt
-from .html_loader import load_html
-from .csv_loader import load_csv
+from .pptx_loader import load_pptx
 
 
 def iter_files(root: str):

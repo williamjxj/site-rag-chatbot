@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+
 from pydantic_settings import BaseSettings
 
 # Get backend directory (parent of src/)
@@ -24,10 +25,14 @@ class Settings(BaseSettings):
     openai_base_url: str = os.getenv("OPENAI_BASE_URL", "")
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
     # Embedding API key (use OpenAI key for embeddings, separate from chat)
-    embedding_api_key: str = os.getenv("EMBEDDING_API_KEY", "")  # Falls back to openai_api_key if not set
+    embedding_api_key: str = os.getenv(
+        "EMBEDDING_API_KEY", ""
+    )  # Falls back to openai_api_key if not set
     embedding_model: str = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
     # Free embedding model configuration
-    embedding_provider: str = os.getenv("EMBEDDING_PROVIDER", "")  # "openai" | "local" | "" (auto-detect)
+    embedding_provider: str = os.getenv(
+        "EMBEDDING_PROVIDER", ""
+    )  # "openai" | "local" | "" (auto-detect)
     free_embedding_model: str = os.getenv("FREE_EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 
     # Chat LLM
@@ -47,7 +52,7 @@ class Settings(BaseSettings):
         "You are a helpful website assistant.\n"
         "Answer questions ONLY using the provided context from the website and documents.\n"
         "If the answer is not in the context, say you don't know and suggest where the user might look.\n"
-        "Always include a short Sources list at the end with URLs or file paths."
+        "Always include a short Sources list at the end with URLs or file paths.",
     )
 
     # Logging
@@ -66,7 +71,7 @@ settings = Settings()
 def validate_api_keys() -> None:
     """
     Validate that at least one API key is configured.
-    
+
     Raises:
         ValueError: If neither OPENAI_API_KEY nor DEEPSEEK_API_KEY is set
     """
@@ -80,37 +85,37 @@ def validate_api_keys() -> None:
 def update_embedding_provider(value: str) -> None:
     """
     Update embedding provider in .env file and in-memory settings.
-    
+
     Args:
         value: Embedding provider value ("openai" or "local")
-    
+
     Raises:
         ValueError: If value is not "openai" or "local"
         IOError: If .env file cannot be read or written
     """
     import logging
-    
+
     logger = logging.getLogger(__name__)
-    
+
     if value not in ["openai", "local"]:
         raise ValueError(f"Invalid embedding provider: {value}. Must be 'openai' or 'local'.")
-    
+
     # Update in-memory settings
     settings.embedding_provider = value
-    
+
     # Update .env file
     env_file = BACKEND_DIR / ".env"
-    
+
     # Read current .env file if it exists
     lines = []
     if env_file.exists():
         try:
-            with open(env_file, "r", encoding="utf-8") as f:
+            with open(env_file, encoding="utf-8") as f:
                 lines = f.readlines()
-        except IOError as e:
+        except OSError as e:
             logger.error(f"Failed to read .env file: {e}")
-            raise IOError(f"Failed to read .env file: {e}") from e
-    
+            raise OSError(f"Failed to read .env file: {e}") from e
+
     # Update or add EMBEDDING_PROVIDER line
     updated = False
     for i, line in enumerate(lines):
@@ -118,15 +123,15 @@ def update_embedding_provider(value: str) -> None:
             lines[i] = f"EMBEDDING_PROVIDER={value}\n"
             updated = True
             break
-    
+
     if not updated:
         lines.append(f"EMBEDDING_PROVIDER={value}\n")
-    
+
     # Write back to .env file
     try:
         with open(env_file, "w", encoding="utf-8") as f:
             f.writelines(lines)
         logger.info(f"Updated EMBEDDING_PROVIDER to {value} in .env file")
-    except IOError as e:
+    except OSError as e:
         logger.error(f"Failed to write .env file: {e}")
-        raise IOError(f"Failed to write .env file: {e}") from e
+        raise OSError(f"Failed to write .env file: {e}") from e
