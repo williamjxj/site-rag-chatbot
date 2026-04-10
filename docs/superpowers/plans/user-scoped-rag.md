@@ -186,7 +186,7 @@ git commit -m "feat: require auth for chat endpoint, pass user_id to RAG"
 
 - [ ] **Step 1: Start backend**
 
-Run: `cd backend && /Users/william.jiang/my-apps/site-rag-chatbot/.venv/bin/python -m uvicorn src.app:app --reload --port 8000 &`
+Run: `cd backend && /Users/william.jiang/my-apps/site-rag-chatbot/backend/venv/bin/python -m uvicorn src.app:app --reload --port 8000 &`
 Background it and wait 3 seconds
 
 - [ ] **Step 2: Register and login to get token**

@@ -8,9 +8,10 @@
 # Start database
 cd backend && docker compose up -d
 
-# Create virtual environment (use .venv)
-python -m venv .venv
-source .venv/bin/activate
+# Create virtual environment (use backend/venv)
+cd backend
+python -m venv venv
+source venv/bin/activate
 
 # Install dependencies
 # Option 1: From pyproject.toml (recommended)

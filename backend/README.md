@@ -37,22 +37,22 @@ pip install -r requirements-dev.txt
 
 ## Virtual Environment
 
-**Yes, use `.venv`** (recommended Python standard).
+**Yes, use `venv`** (recommended Python standard).
 
 ### Setup
 
 ```bash
 # Create virtual environment
-python -m venv .venv
+python -m venv venv
 
 # Activate
-source .venv/bin/activate
+source venv/bin/activate
 
 # Install dependencies
 pip install -e .
 ```
 
-The `.venv/` directory is already in `.gitignore`, so it won't be committed.
+The `venv/` directory is already in `.gitignore`, so it won't be committed.
 
 ## Project Structure
 

@@ -97,8 +97,8 @@ Screenshots are generated automatically via Playwright (`pnpm snapshots` from `f
    ```bash
    # Backend
    cd backend
-   python -m venv .venv
-   source .venv/bin/activate
+    python -m venv venv
+    source venv/bin/activate
    
    # Option 1: Install from pyproject.toml (recommended)
    pip install -e .
@@ -580,8 +580,8 @@ The backend uses **pyproject.toml** (modern Python standard) for dependency mana
 **Install:**
 ```bash
 cd backend
-python -m venv .venv
-source .venv/bin/activate
+python -m venv venv
+source venv/bin/activate
 pip install -e .  # Or: pip install -r requirements.txt
 ```
 
