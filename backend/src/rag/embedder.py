@@ -1,6 +1,7 @@
 """Vector embedding generation using OpenAI API or free local models."""
 
 import logging
+import os
 from typing import TYPE_CHECKING
 
 from ..config import settings
@@ -64,6 +65,11 @@ def _get_free_model() -> "SentenceTransformer":
 
         model_name = settings.free_embedding_model
         logger.info(f"Loading free embedding model: {model_name}")
+
+        # Ensure HF_TOKEN is set in environment for sentence-transformers downloads
+        if settings.hf_token and not os.environ.get("HF_TOKEN"):
+            os.environ["HF_TOKEN"] = settings.hf_token
+            logger.debug("Set HF_TOKEN environment variable from settings")
 
         try:
             _free_model = SentenceTransformer(model_name)

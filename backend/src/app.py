@@ -1,6 +1,7 @@
 """FastAPI application entry point."""
 
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, status
@@ -24,6 +25,12 @@ async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown."""
     # Startup
     logger.info("Validating configuration...")
+
+    # Set HF_TOKEN in environment for Hugging Face downloads
+    if settings.hf_token and not os.environ.get("HF_TOKEN"):
+        os.environ["HF_TOKEN"] = settings.hf_token
+        logger.info("HF_TOKEN set from configuration")
+
     try:
         validate_api_keys()
         logger.info("API keys validated")

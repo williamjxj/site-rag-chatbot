@@ -63,6 +63,9 @@ class Settings(BaseSettings):
 
     jwt_secret_key: str = os.getenv("JWT_SECRET_KEY", "dev-secret-change-in-production")
 
+    # Hugging Face token for downloading models (sets HF_TOKEN env var)
+    hf_token: str = os.getenv("HF_TOKEN", "")
+
     class Config:
         """Pydantic config."""
 

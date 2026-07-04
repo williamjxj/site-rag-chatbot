@@ -30,9 +30,12 @@ def upsert_chunks(
 
     with SessionLocal() as db:
         try:
-            if replace_existing_uris and user_id is not None:
+            if replace_existing_uris:
                 uris = {it["uri"] for it in items}
-                db.execute(delete(Chunk).where(Chunk.user_id == user_id, Chunk.uri.in_(uris)))
+                stmt = delete(Chunk).where(Chunk.uri.in_(uris))
+                if user_id is not None:
+                    stmt = stmt.where(Chunk.user_id == user_id)
+                db.execute(stmt)
 
             # Embed in batches
             texts = [it["text"] for it in items]
