@@ -1,6 +1,24 @@
+
 # Backend - Site RAG Chatbot
 
-FastAPI backend for the RAG chatbot application.
+Site RAG Chatbot is a modern Retrieval-Augmented Generation (RAG) platform that lets users upload, manage, and chat with their own documents and website content. It combines semantic search, multi-LLM support, and a professional web UI to deliver accurate, source-cited answers from your private knowledge base.
+
+## Top 5 Features
+
+1. **Semantic Chat with Source Citations:**
+	Users can ask questions and receive answers grounded in their uploaded documents, with every answer citing its sources.
+
+2. **Multi-Format Content Ingestion:**
+	Supports uploading and processing PDFs, Markdown, TXT files, and crawling static websites via sitemap.
+
+3. **Multi-LLM and Embedding Provider Support:**
+	Easily switch between OpenAI, DeepSeek, Kimi, MiniMax, or local sentence-transformers for both chat and embeddings.
+
+4. **Multi-Tenant Isolation:**
+	Each user’s documents and chat history are securely isolated, supporting per-user knowledge bases.
+
+5. **Admin & Professional UI:**
+	Includes a branded admin interface for document management, embedding provider selection, and system status, plus a polished chat UI with markdown rendering.
 
 ## Dependencies
 
@@ -84,6 +102,31 @@ backend/
 - **beautifulsoup4** - HTML parsing
 
 See `pyproject.toml` for complete list with versions.
+
+
+## How to Start the Service
+
+To start the backend server (FastAPI + Uvicorn):
+
+1. **Activate your virtual environment:**
+	```bash
+	cd backend
+	source venv/bin/activate
+	```
+
+2. **Start the server:**
+	```bash
+	uvicorn src.app:app --reload --port 8000
+	```
+
+Or use the provided script:
+	```bash
+	./scripts/start-server.sh
+	```
+
+The backend will be available at http://localhost:8000
+
+---
 
 ## Embedding Model Configuration
 

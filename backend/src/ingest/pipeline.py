@@ -3,6 +3,8 @@
 import uuid
 from pathlib import Path
 
+from sqlalchemy import delete, select
+
 from ..config import settings
 from ..db import Chunk, SessionLocal
 from ..rag.embedder import embed_texts
@@ -13,7 +15,9 @@ from .sources.file_loader import iter_files, load_file
 from .sources.sitemap_crawler import fetch_page, fetch_sitemap_urls
 
 
-def upsert_chunks(items: list[dict], user_id: int | None = None) -> None:
+def upsert_chunks(
+    items: list[dict], user_id: int | None = None, replace_existing_uris: bool = False
+) -> None:
     """
     Upsert chunks into database with embeddings.
 
@@ -25,26 +29,16 @@ def upsert_chunks(items: list[dict], user_id: int | None = None) -> None:
         return
 
     with SessionLocal() as db:
-        # Embed in batches
-        texts = [it["text"] for it in items]
-        embeddings = embed_texts(texts)
+        try:
+            if replace_existing_uris and user_id is not None:
+                uris = {it["uri"] for it in items}
+                db.execute(delete(Chunk).where(Chunk.user_id == user_id, Chunk.uri.in_(uris)))
 
-        for it, emb in zip(items, embeddings):
-            existing = db.get(Chunk, it["id"])
-            if existing:
-                # Skip if unchanged
-                if existing.text_hash == it["text_hash"]:
-                    continue
-                # Update existing chunk
-                existing.text = it["text"]
-                existing.text_hash = it["text_hash"]
-                existing.embedding = emb
-                existing.title = it.get("title")
-                existing.heading_path = it.get("heading_path")
-                if user_id:
-                    existing.user_id = user_id
-            else:
-                # Insert new chunk
+            # Embed in batches
+            texts = [it["text"] for it in items]
+            embeddings = embed_texts(texts)
+
+            for it, emb in zip(items, embeddings):
                 db.add(
                     Chunk(
                         id=it["id"],
@@ -58,7 +52,10 @@ def upsert_chunks(items: list[dict], user_id: int | None = None) -> None:
                         user_id=user_id,
                     )
                 )
-        db.commit()
+            db.commit()
+        except Exception:
+            db.rollback()
+            raise
 
 
 def ingest_website(user_id: int | None = None) -> None:
@@ -92,12 +89,7 @@ def ingest_website(user_id: int | None = None) -> None:
 
     if items:
         items = deduplicate_chunks(items)
-        upsert_chunks(items, user_id)
-
-    if items:
-        # Deduplicate before upserting
-        items = deduplicate_chunks(items)
-        upsert_chunks(items)
+        upsert_chunks(items, user_id, replace_existing_uris=True)
         print(f"Ingested {len(items)} chunks from website")
 
 
@@ -168,7 +160,7 @@ def ingest_single_file(file_path: Path, user_id: int | None = None) -> int:
     if items:
         # Deduplicate before upserting
         items = deduplicate_chunks(items)
-        upsert_chunks(items, user_id)
+        upsert_chunks(items, user_id, replace_existing_uris=True)
         return len(items)
     return 0
 
@@ -231,7 +223,7 @@ def ingest_docs(user_id: int | None = None) -> None:
 
     if items:
         items = deduplicate_chunks(items)
-        upsert_chunks(items, user_id)
+        upsert_chunks(items, user_id, replace_existing_uris=True)
         print(f"Ingested {len(items)} chunks from documents")
 
 

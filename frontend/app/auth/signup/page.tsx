@@ -18,8 +18,17 @@ export default function SignUpPage() {
     setError('');
     setLoading(true);
     try {
-      await register({ email, username, password, full_name: fullName || undefined });
-      await login({ username, password });
+      const trimmedEmail = email.trim();
+      const trimmedUsername = username.trim();
+      const trimmedFullName = fullName.trim();
+
+      await register({
+        email: trimmedEmail,
+        username: trimmedUsername,
+        password,
+        full_name: trimmedFullName || undefined,
+      });
+      await login({ username: trimmedUsername, password });
       router.push('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');

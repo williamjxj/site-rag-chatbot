@@ -1,6 +1,24 @@
+
 # Site RAG Chatbot
 
-A RAG (Retrieval Augmented Generation) chatbot application that ingests content from static websites and documents, and provides a web-based chatbot interface for users to ask questions and receive answers with source citations.
+Site RAG Chatbot is a modern Retrieval-Augmented Generation (RAG) platform that lets users upload, manage, and chat with their own documents and website content. It combines semantic search, multi-LLM support, and a professional web UI to deliver accurate, source-cited answers from your private knowledge base.
+
+## Top 5 Features
+
+1. **Semantic Chat with Source Citations:**
+    Users can ask questions and receive answers grounded in their uploaded documents, with every answer citing its sources.
+
+2. **Multi-Format Content Ingestion:**
+    Supports uploading and processing PDFs, Markdown, TXT files, and crawling static websites via sitemap.
+
+3. **Multi-LLM and Embedding Provider Support:**
+    Easily switch between OpenAI, DeepSeek, Kimi, MiniMax, or local sentence-transformers for both chat and embeddings.
+
+4. **Multi-Tenant Isolation:**
+    Each user’s documents and chat history are securely isolated, supporting per-user knowledge bases.
+
+5. **Admin & Professional UI:**
+    Includes a branded admin interface for document management, embedding provider selection, and system status, plus a polished chat UI with markdown rendering.
 
 ## 🚀 Quick Overview
 

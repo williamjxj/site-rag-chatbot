@@ -49,6 +49,25 @@ export interface UploadResponse {
   chunks_ingested: number;
 }
 
+export interface BatchUploadItemResponse {
+  ok: boolean;
+  filename: string;
+  relative_path: string;
+  uri: string;
+  chunks_ingested: number;
+  message: string;
+}
+
+export interface BatchUploadResponse {
+  ok: boolean;
+  message: string;
+  total_files: number;
+  succeeded_files: number;
+  failed_files: number;
+  chunks_ingested: number;
+  results: BatchUploadItemResponse[];
+}
+
 export interface ErrorResponse {
   error: string;
   message: string;

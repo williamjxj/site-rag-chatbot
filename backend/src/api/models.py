@@ -78,6 +78,29 @@ class UploadResponse(BaseModel):
     chunks_ingested: int = Field(..., ge=0, description="Number of chunks ingested from the file")
 
 
+class BatchUploadItemResponse(BaseModel):
+    """Per-file result for batch upload."""
+
+    ok: bool = Field(..., description="Whether the file upload succeeded")
+    filename: str = Field(..., description="Uploaded file name")
+    relative_path: str = Field(..., description="Relative path from the selected folder, if any")
+    uri: str = Field(..., description="Stored document URI used for indexing")
+    chunks_ingested: int = Field(..., ge=0, description="Number of chunks ingested from the file")
+    message: str = Field(..., description="Human-readable status message")
+
+
+class BatchUploadResponse(BaseModel):
+    """Response model for batch upload endpoint."""
+
+    ok: bool = Field(..., description="Whether the batch completed with at least one success")
+    message: str = Field(..., description="Overall batch status message")
+    total_files: int = Field(..., ge=0, description="Total files submitted")
+    succeeded_files: int = Field(..., ge=0, description="Number of files uploaded successfully")
+    failed_files: int = Field(..., ge=0, description="Number of files that failed")
+    chunks_ingested: int = Field(..., ge=0, description="Total number of chunks ingested across the batch")
+    results: list[BatchUploadItemResponse] = Field(..., description="Per-file upload results")
+
+
 class ErrorResponse(BaseModel):
     """Error response model."""
 

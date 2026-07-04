@@ -3,7 +3,7 @@
 import shutil
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy import func, select, text
 
 from ...auth import decode_token
@@ -11,6 +11,8 @@ from ...config import settings, update_embedding_provider
 from ...db import Chunk, SessionLocal, User
 from ...ingest.pipeline import ingest_single_file
 from ..models import (
+    BatchUploadItemResponse,
+    BatchUploadResponse,
     ConfigResponse,
     DeleteResponse,
     Document,
@@ -24,6 +26,98 @@ from .auth import get_current_user
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
 
+def _normalize_relative_path(file_name: str | None, relative_path: str | None = None) -> str:
+    candidate = (relative_path or file_name or "uploaded_file").replace("\\", "/")
+    path = Path(candidate)
+
+    if path.is_absolute() or any(part == ".." for part in path.parts):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "INVALID_FILE_PATH",
+                "message": "Relative paths must stay inside the selected folder",
+                "details": None,
+            },
+        )
+
+    safe_parts = [part for part in path.parts if part not in ("", ".")]
+    if not safe_parts:
+        return file_name or "uploaded_file"
+
+    return Path(*safe_parts).as_posix()
+
+
+def _allowed_file_extension(file_name: str | None) -> bool:
+    allowed_extensions = {
+        ".pdf",
+        ".md",
+        ".mdx",
+        ".txt",
+        ".doc",
+        ".docx",
+        ".xlsx",
+        ".xls",
+        ".ppt",
+        ".pptx",
+        ".html",
+        ".htm",
+        ".csv",
+    }
+    file_ext = Path(file_name).suffix.lower() if file_name else ""
+    return file_ext in allowed_extensions
+
+
+def _save_and_ingest_uploaded_file(
+    file: UploadFile,
+    current_user: User,
+    relative_path: str | None = None,
+) -> tuple[str, int]:
+    if not _allowed_file_extension(file.filename):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "INVALID_FILE_TYPE",
+                "message": "File type not supported. Allowed types: .csv, .doc, .docx, .htm, .html, .md, .mdx, .pdf, .ppt, .pptx, .txt, .xls, .xlsx",
+                "details": None,
+            },
+        )
+
+    docs_path = Path(settings.docs_dir).resolve()
+    docs_path.mkdir(parents=True, exist_ok=True)
+
+    safe_relative_path = _normalize_relative_path(file.filename, relative_path)
+    file_path = docs_path / safe_relative_path
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        with open(file_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": "UPLOAD_ERROR",
+                "message": f"Failed to save file: {str(e)}",
+                "details": None,
+            },
+        ) from e
+
+    try:
+        chunks_ingested = ingest_single_file(file_path, current_user.id)
+        return safe_relative_path, chunks_ingested
+    except Exception as e:
+        try:
+            file_path.unlink()
+        except OSError:
+            pass
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": "INGESTION_ERROR",
+                "message": f"Failed to ingest uploaded file: {str(e)}",
+                "details": None,
+            },
+        ) from e
 @router.get("/documents", response_model=DocumentListResponse, status_code=status.HTTP_200_OK)
 async def list_documents(
     source: str | None = Query(None, enum=["web", "file"], description="Filter by source type"),
@@ -91,80 +185,91 @@ async def upload_document(
     Raises:
         HTTPException: If upload or ingestion fails
     """
-    # Validate file type
-    allowed_extensions = {
-        ".pdf",
-        ".md",
-        ".mdx",
-        ".txt",
-        ".doc",
-        ".docx",
-        ".xlsx",
-        ".xls",
-        ".ppt",
-        ".pptx",
-        ".html",
-        ".htm",
-        ".csv",
-    }
-    file_ext = Path(file.filename).suffix.lower() if file.filename else ""
+    safe_relative_path, chunks_ingested = _save_and_ingest_uploaded_file(file, current_user)
+    return UploadResponse(
+        ok=True,
+        message="File uploaded and ingested successfully",
+        filename=safe_relative_path,
+        chunks_ingested=chunks_ingested,
+    )
 
-    if file_ext not in allowed_extensions:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "error": "INVALID_FILE_TYPE",
-                "message": f"File type not supported. Allowed types: {', '.join(allowed_extensions)}",
-                "details": None,
-            },
-        )
 
-    # Ensure uploads directory exists (resolve to absolute path)
-    docs_path = Path(settings.docs_dir).resolve()
-    docs_path.mkdir(parents=True, exist_ok=True)
+@router.post("/upload/batch", response_model=BatchUploadResponse, status_code=status.HTTP_200_OK)
+async def upload_documents_batch(
+    files: list[UploadFile] = File(...),
+    relative_paths: list[str] = Form(default=[]),
+    current_user: User = Depends(get_current_user),
+) -> BatchUploadResponse:
+    results: list[BatchUploadItemResponse] = []
+    chunks_ingested = 0
+    succeeded_files = 0
+    failed_files = 0
 
-    # Save file (use filename from upload, sanitize if needed)
-    safe_filename = file.filename or "uploaded_file"
-    # Prevent directory traversal
-    if ".." in safe_filename or "/" in safe_filename or "\\" in safe_filename:
-        safe_filename = Path(safe_filename).name
-    file_path = docs_path / safe_filename
-    try:
-        with open(file_path, "wb") as f:
-            shutil.copyfileobj(file.file, f)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={
-                "error": "UPLOAD_ERROR",
-                "message": f"Failed to save file: {str(e)}",
-                "details": None,
-            },
-        ) from e
-
-    # Ingest the uploaded file
-    try:
-        chunks_ingested = ingest_single_file(file_path, current_user.id)
-        return UploadResponse(
-            ok=True,
-            message="File uploaded and ingested successfully",
-            filename=file.filename,
-            chunks_ingested=chunks_ingested,
-        )
-    except Exception as e:
-        # Clean up file if ingestion fails
+    for index, file in enumerate(files):
+        submitted_relative_path = relative_paths[index] if index < len(relative_paths) else None
         try:
-            file_path.unlink()
-        except:
-            pass
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={
-                "error": "INGESTION_ERROR",
-                "message": f"Failed to ingest uploaded file: {str(e)}",
-                "details": None,
-            },
-        ) from e
+            saved_relative_path, file_chunks = _save_and_ingest_uploaded_file(
+                file, current_user, submitted_relative_path
+            )
+            succeeded_files += 1
+            chunks_ingested += file_chunks
+            results.append(
+                BatchUploadItemResponse(
+                    ok=True,
+                    filename=file.filename or saved_relative_path,
+                    relative_path=saved_relative_path,
+                    uri=saved_relative_path,
+                    chunks_ingested=file_chunks,
+                    message="Uploaded and ingested successfully",
+                )
+            )
+        except HTTPException as e:
+            failed_files += 1
+            fallback_uri = (submitted_relative_path or file.filename or "uploaded_file").replace(
+                "\\", "/"
+            )
+            error_message = (
+                e.detail.get("message") if isinstance(e.detail, dict) else str(e.detail)
+            ) or "Upload failed"
+            results.append(
+                BatchUploadItemResponse(
+                    ok=False,
+                    filename=file.filename or "uploaded_file",
+                    relative_path=submitted_relative_path or (file.filename or "uploaded_file"),
+                    uri=fallback_uri,
+                    chunks_ingested=0,
+                    message=error_message,
+                )
+            )
+        except Exception as e:
+            failed_files += 1
+            fallback_uri = (submitted_relative_path or file.filename or "uploaded_file").replace(
+                "\\", "/"
+            )
+            results.append(
+                BatchUploadItemResponse(
+                    ok=False,
+                    filename=file.filename or "uploaded_file",
+                    relative_path=submitted_relative_path or (file.filename or "uploaded_file"),
+                    uri=fallback_uri,
+                    chunks_ingested=0,
+                    message=f"Failed to process file: {e}",
+                )
+            )
+
+    return BatchUploadResponse(
+        ok=succeeded_files > 0,
+        message=(
+            "Batch upload completed"
+            if failed_files == 0
+            else "Batch upload completed with some failures"
+        ),
+        total_files=len(files),
+        succeeded_files=succeeded_files,
+        failed_files=failed_files,
+        chunks_ingested=chunks_ingested,
+        results=results,
+    )
 
 
 @router.delete("/documents", response_model=DeleteResponse, status_code=status.HTTP_200_OK)

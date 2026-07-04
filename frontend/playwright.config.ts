@@ -27,7 +27,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `NEXT_PUBLIC_API_URL=http://localhost:8000 PORT=${PORT} pnpm dev --hostname ${HOST} --port ${PORT}`,
+    command: `NEXT_PUBLIC_API_URL=http://localhost:8088 PORT=${PORT} pnpm dev --hostname ${HOST} --port ${PORT}`,
     url: `http://${HOST}:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,

@@ -2,6 +2,7 @@
 
 import { apiRequest } from "./base";
 import type {
+  BatchUploadResponse,
   DocumentListResponse,
   DeleteResponse,
   UploadResponse,
@@ -43,14 +44,37 @@ export async function deleteDocument(documentId: string): Promise<DeleteResponse
 }
 
 export async function uploadDocument(file: File): Promise<UploadResponse> {
-  const formData = new FormData();
-  formData.append("file", file);
+  const response = await uploadDocuments([file]);
+  const result = response.results[0];
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  if (!result) {
+    throw new Error("Upload failed");
+  }
+
+  if (!result.ok) {
+    throw new Error(result.message);
+  }
+
+  return {
+    ok: true,
+    message: result.message,
+    filename: result.filename,
+    chunks_ingested: result.chunks_ingested,
+  };
+}
+
+export async function uploadDocuments(files: File[]): Promise<BatchUploadResponse> {
+  const formData = new FormData();
+  files.forEach((file) => {
+    formData.append("files", file);
+    formData.append("relative_paths", (file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name);
+  });
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8088";
   const token =
     typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
 
-  const response = await fetch(`${API_URL}/admin/upload`, {
+  const response = await fetch(`${API_URL}/admin/upload/batch`, {
     method: "POST",
     body: formData,
     headers: {

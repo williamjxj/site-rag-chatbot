@@ -1,6 +1,6 @@
 /** Base API client utilities */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8088";
 
 export class ApiError extends Error {
   constructor(
